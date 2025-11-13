@@ -1,0 +1,2 @@
+from .efficient_net_v2 import EfficientNetV2
+from .inverse_efficient_net_v2 import InverseEfficientNetV2

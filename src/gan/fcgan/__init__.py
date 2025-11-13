@@ -1,0 +1,3 @@
+from .fc_critic import FullyConnectedCritic
+from .fc_generator import FullyConnectedGenerator
+from .fc_generator_skip import FullyConnectedGeneratorSkip

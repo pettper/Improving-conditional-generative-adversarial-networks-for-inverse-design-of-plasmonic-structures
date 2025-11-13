@@ -1,0 +1,10 @@
+__pycache__/
+runs/
+.idea/
+/sample_data/
+/saved_models/cnn_regression/cnn_regression_240224.pth.tar
+/saved_models/cnn_regression/temp.pth.tar
+/saved_models/gan/gan_model_240223.pth.tar
+/saved_models/gan/gan_model_240223_continued.pth.tar
+/au_sphere_data_backup/
+/pytorch_env.yml

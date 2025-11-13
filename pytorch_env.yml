@@ -1,0 +1,23 @@
+name: pytorch_env
+channels:
+  - defaults
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.11
+  - libjpeg-turbo
+  - libpng
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cpuonly
+  - tensorboard
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - openpyxl
+  - pyarrow
+  - miepython
+  - imageio
+prefix: ./envs
