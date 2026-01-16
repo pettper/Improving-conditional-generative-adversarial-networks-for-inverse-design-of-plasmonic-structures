@@ -29,7 +29,7 @@ class DCGANGenerator(nn.Module):
         if self.image_size == 64:
             self.upsampling_block = DCGANGenerator64(out_channels)
         elif self.image_size == 128:
-            self.upsampling_block = DCGANGenerator128(out_channels, use_cbn=self.use_cbn, embedding_size=self.proj_dim)
+            self.upsampling_block = DCGANGenerator128(out_channels, use_cbn=self.use_cbn, embedding_size=self.proj_dim, features=features)
         else:
             raise Exception(f"Image size {self.image_size} is not supported")
 

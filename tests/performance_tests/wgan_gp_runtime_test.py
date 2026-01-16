@@ -59,6 +59,7 @@ CHANNELS = 2
 Y_DIM = 81
 IMAGE_SIZE = 128
 Z_DIM = 100
+FEATURES=1
 
 # Hyperparameters according to WGAN-paper
 LEARNING_RATE = args.learning_rate
@@ -109,14 +110,14 @@ print(f"Use label projection: {use_lp}")
 print(f"Use embedding network: {use_embedding_net}")
 print(f"Use conditional batch normalization: {use_cbn}")
 # Create models
-critic = Critic(CHANNELS, target_channels=variable.size(), image_size=IMAGE_SIZE,
+critic = Critic(CHANNELS, target_channels=variable.size(), image_size=IMAGE_SIZE, features=FEATURES,
                 lp=use_lp, embed=use_embedding_net).to(device)
 if model_type == "dc":
     generator = Generator(CHANNELS, target_channels=variable.size(), y_dim=Y_DIM, z_dim=Z_DIM, image_size=IMAGE_SIZE,
-                          use_cbn=use_cbn).to(device)
+                          features=FEATURES, use_cbn=use_cbn).to(device)
 else:
     generator = Generator(CHANNELS, target_channels=variable.size(), y_dim=Y_DIM, z_dim=Z_DIM,
-                          image_size=IMAGE_SIZE).to(device)
+                          image_size=IMAGE_SIZE, features=FEATURES).to(device)
 
 # Initialize weights
 initialize_dcgan_weights(critic)
