@@ -69,10 +69,15 @@ class WGANTrainer(BaseGanTrainer):
         return running_critic_loss / it, running_gen_loss / it, elapsed, running_wasserstein_distance / it
 
     def train_model(self, epochs):
+
+        epoch_times = torch.zeros(epochs)
+
         # Train the model for 'epochs' number of epochs
         for epoch in range(epochs):
+            
             # Train one epoch, collect losses and time
             critic_loss, gen_loss, elapsed, wasserstein_distance = self.train_one_epoch()
+            epoch_times[epoch] = elapsed
 
             # Print losses and write images to tensorboard
             if epoch % 10 == 0:
@@ -89,7 +94,12 @@ class WGANTrainer(BaseGanTrainer):
             # if epoch % 25 == 0 and self.save_image_dir:
             #    self.save_images(self.last_epoch + epoch, images)
 
-            # Monitor the reconstruction error every 10th epoch
+            
+            """
+            The contents in the below if statement are very slow
+            Tests show that for the full dataset ~3000 samples. It takes ~4.5 seconds to evaluate it.
+            """
+            # Monitor the reconstruction error every 50th epoch
             if epoch % 50 == 0:
                 # On training data...
                 train_rce_mean, train_rce_var = estimate_reconstruction_error(self.generator, self.training_loader,
@@ -97,8 +107,10 @@ class WGANTrainer(BaseGanTrainer):
                 # On validation data...
                 val_rce_mean, val_rce_var = estimate_reconstruction_error(self.generator, self.validation_loader,
                                                                           self.device, metric=L1Loss())
+                
                 self.reconstruction_error.append([self.last_epoch + epoch, train_rce_mean, train_rce_var, val_rce_mean,
                                                   val_rce_var])
+                
                 if self.write_images_to_tensorboard:
                     self.write_reconstruction_error_to_tensorboard(self.last_epoch + epoch, val_rce_mean, val_rce_var)
 
@@ -121,6 +133,8 @@ class WGANTrainer(BaseGanTrainer):
         # Flush and close
         self.writer.flush()
         self.writer.close()
+
+        return epoch_times
 
     def train_critic(self, real, labels):
         n_samples, c, h, w = real.shape

@@ -65,6 +65,7 @@ class BaseGanTrainer:
         # Fixed samples for saving images
         if training_loader is not None:
             self.train_samples = next(iter(training_loader))
+            
         if validation_loader is not None:
             self.validation_samples = next(iter(validation_loader))
 
@@ -84,10 +85,10 @@ class BaseGanTrainer:
             val_fake = self.generator(fixed_noise[:n_images].to(self.device), val_labels[:n_images])
 
             # Stores up to n_images
-            train_img_grid_real = make_grid(train_real[:n_images, 0], normalize=True)
-            train_img_grid_fake = make_grid(train_fake[:n_images, 0], normalize=True)
-            val_img_grid_real = make_grid(val_real[:n_images, 0], normalize=True)
-            val_img_grid_fake = make_grid(val_fake[:n_images, 0], normalize=True)
+            train_img_grid_real = make_grid(train_real[:n_images, 0:1], normalize=True)
+            train_img_grid_fake = make_grid(train_fake[:n_images, 0:1], normalize=True)
+            val_img_grid_real = make_grid(val_real[:n_images, 0:1], normalize=True)
+            val_img_grid_fake = make_grid(val_fake[:n_images, 0:1], normalize=True)
             im_grids = (train_img_grid_real, train_img_grid_fake, val_img_grid_real, val_img_grid_fake)
             images = (train_real[:n_images, ], train_fake[:n_images, ], val_real[:n_images, ], val_fake[:n_images, ])
         return im_grids, images

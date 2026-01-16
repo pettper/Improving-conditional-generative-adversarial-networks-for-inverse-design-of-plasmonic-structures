@@ -16,7 +16,7 @@ C, W, H = 2, 128, 128  # Channels, Pixels, Pixels
 
 class DimerDataset(Dataset):
 
-    def __init__(self, root_dir, variable, transform=None, target_transform=None):
+    def __init__(self, root_dir, variable, transform=None, target_transform=None, number_of_samples=None):
         """
          root_dir: root_dir is the directory where the data files are stored. Each file in the root directory
          corresponds to exactly ONE sample.
@@ -30,6 +30,7 @@ class DimerDataset(Dataset):
         self.variable = variable
         self.transform = transform
         self.target_transform = target_transform
+        self.number_of_samples=number_of_samples
 
         # Data variables to be returned
         self.output_min, self.output_data = 0, 0
@@ -51,7 +52,7 @@ class DimerDataset(Dataset):
             self.output_data = torch.empty(N, Y_DIM)
 
         # Load all samples
-        for idx in range(self.__len__()):
+        for idx in range(N):
             sample_dir = sorted_root_dir[idx]
             sample_path = os.path.join(self.root_dir, sample_dir)
             sample_files = sorted(os.listdir(sample_path))
@@ -105,7 +106,13 @@ class DimerDataset(Dataset):
         self.output_data = self.apply_target_transform(self.output_data)
 
     def __len__(self):
-        return len(os.listdir(self.root_dir))
+        total_number_samples=len(os.listdir(self.root_dir))
+        if self.number_of_samples is None:
+            n = total_number_samples
+        else:
+            n = torch.min(torch.Tensor([total_number_samples, self.number_of_samples]))
+        assert n>0
+        return int(n)
 
     def __getitem__(self, idx):
         # Get file with sample

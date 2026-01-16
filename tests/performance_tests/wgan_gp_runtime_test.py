@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from torch.optim import Adam
 import argparse
 from pathlib import Path
+import time
 
 # Configure command line arguments
 parser = argparse.ArgumentParser(prog='wgan_gp_main.py', description="The program trains a Wasserstein GAN model on user"
@@ -20,11 +21,10 @@ parser.add_argument("-b", "--batch_size", type=int, default=64, help="Batch size
 parser.add_argument("-lr", "--learning_rate", type=float, default=0.0001, help="Learning rate for training.")
 parser.add_argument("-b1", "--beta1", type=float, default=0.0, help="Beta 1 for Adam.")
 parser.add_argument("-b2", "--beta2", type=float, default=0.9, help="Beta 2 for Adam.")
-parser.add_argument("-sf", "--save_model_filename", type=str, default=None, help="Optional filename to save model.")
-parser.add_argument("-lf", "--load_model_filename", type=str, default=None, help="Optional filename to load model.")
 parser.add_argument("-ffn", "--feed_forward_network", type=str, default=None,
                     help="Optional feed forward network to use as evaluation metric")
 parser.add_argument("-ddir", "--data_dir", type=str, help="Root directory of dataset.")
+parser.add_argument("-dsz", "--dataset_size", type=int, help="Specify dataset size. Must be <= the number of observations in --data_dir")
 parser.add_argument("-tb", "--tensorboard", type=bool, default=False, help="Write training results to tensorboard.")
 parser.add_argument("-cbn", "--use_cbn", type=str, default="False", help="Use conditional batch normalization.")
 parser.add_argument("-lp", "--use_label_projection", type=str, default="True", help="Use label projection.")
@@ -74,7 +74,7 @@ root_dir = Path(args.data_dir)
 train_dir = root_dir.joinpath(Path("training/featherfiles/"))
 val_dir = root_dir.joinpath(Path("validation/featherfiles/"))
 
-training_dataset = Dataset(train_dir, variable)
+training_dataset = Dataset(train_dir, variable, number_of_samples=args.dataset_size)
 validation_dataset = Dataset(val_dir,  # Validation set uses same transforms as in the training set
                              variable,
                              transform=lambda x: training_dataset.apply_transform(x),
@@ -178,9 +178,20 @@ if args.feed_forward_network is not None:
             raise Exception("The feed forward network is not of type EffNetV2 or EffNet. Can also be that variable is not supported.")
 
 # Train model
-save_model_filename = args.save_model_filename
-load_model_filename = args.load_model_filename
 gan_trainer = WGANTrainer(critic, generator, critic_optim, generator_optim, training_loader, validation_loader, device,
-                          load_model_filename=load_model_filename, save_model_filename=save_model_filename,
+                          load_model_filename=None, save_model_filename=None,
                           forward_network=forward_network, write_to_tensorboard=args.tensorboard)
-gan_trainer.train_model(EPOCHS)
+
+# Measure runtime
+start = time.perf_counter()
+epoch_times = gan_trainer.train_model(EPOCHS)
+elapsed = time.perf_counter() - start
+
+print("--- WGAN-GP RUN TIME TEST ---")
+print("Epochs                    = %d" % EPOCHS)
+print("Average runtime per epoch = %.7f" % (elapsed / EPOCHS))
+print("Median runtime per epoch  = %.7f" % (torch.median(epoch_times)))
+print(f"Epoch times: {epoch_times}")
+
+del training_loader
+del validation_loader
