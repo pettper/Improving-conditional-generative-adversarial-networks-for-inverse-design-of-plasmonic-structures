@@ -16,9 +16,9 @@ class DCGANGenerator(nn.Module):
         self.use_cbn = use_cbn
 
         self.transform_block = nn.Sequential(
-            nn.Linear(in_features=proj_dim, out_features=features * 256 * 4 * 4),
+            nn.Linear(in_features=proj_dim, out_features=features * 64 * 4 * 4),
             nn.ReLU(),
-            nn.Unflatten(1, (features * 256, 4, 4))
+            nn.Unflatten(1, (features * 64, 4, 4))
         )
         self.noise_layer = nn.Sequential(
             nn.Linear(in_features=z_dim, out_features=proj_dim),

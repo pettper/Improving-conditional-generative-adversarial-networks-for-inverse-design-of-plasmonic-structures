@@ -17,15 +17,15 @@ class FullyConnectedCritic(nn.Module):
         # MLP
         self.mlp = nn.Sequential(
             nn.Flatten(start_dim=1),
-            nn.Linear(in_features=in_channels*image_size*image_size, out_features=128*features),
+            nn.Linear(in_features=in_channels*image_size*image_size, out_features=64*features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=features*128),
+            nn.Linear(in_features=64*features, out_features=features*64),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64*features, out_features=64*features),
             nn.ReLU(),
-            nn.Linear(in_features=128 * features, out_features=features * 128),
+            nn.Linear(in_features=64 * features, out_features=features * 64),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=proj_dim),
+            nn.Linear(in_features=64*features, out_features=proj_dim),
         )
 
         # Label embedding layer

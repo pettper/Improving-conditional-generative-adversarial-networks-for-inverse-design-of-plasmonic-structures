@@ -20,15 +20,15 @@ class FullyConnectedGenerator(nn.Module):
         self.target_channels = target_channels
 
         self.mlp = nn.Sequential(
-            nn.Linear(in_features=proj_dim, out_features=128*features),
+            nn.Linear(in_features=proj_dim, out_features=64*features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64*features, out_features=64*features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64*features, out_features=64*features),
             nn.ReLU(),
-            nn.Linear(in_features=128 * features, out_features=128 * features),
+            nn.Linear(in_features=64 * features, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=out_channels*image_size*image_size),
+            nn.Linear(in_features=64*features, out_features=out_channels*image_size*image_size),
             nn.Tanh(),
             nn.Unflatten(dim=1, unflattened_size=(out_channels, image_size, image_size))
         )
