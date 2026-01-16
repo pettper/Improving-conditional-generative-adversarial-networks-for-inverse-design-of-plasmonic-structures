@@ -10,30 +10,29 @@ from torch.optim import Adam
 import argparse
 from pathlib import Path
 
+# Function to load settings from yaml-file
+def load_yaml(settings_path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            if data is None:
+                return {}
+            return data
+    except FileNotFoundError:
+        raise FileNotFoundError(f"YAML file not found: {settings_path}")
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML in {settings_path}: {e}")
+
 # Configure command line arguments
 parser = argparse.ArgumentParser(prog='wgan_gp_main.py', description="The program trains a Wasserstein GAN model on user"
                                                                      + " specified data for a given number of epochs.")
-parser.add_argument("-a", "--architecture", type=str, default="fc", help="Model architecture to use.")
-parser.add_argument("-var", "--variable", type=str, default="rot", help="Variable from dimer dataset to use.")
-parser.add_argument("-e", "--epochs", type=int, default=1000, help="Number of epochs to train.")
-parser.add_argument("-b", "--batch_size", type=int, default=64, help="Batch size for training.")
-parser.add_argument("-lr", "--learning_rate", type=float, default=0.0001, help="Learning rate for training.")
-parser.add_argument("-b1", "--beta1", type=float, default=0.0, help="Beta 1 for Adam.")
-parser.add_argument("-b2", "--beta2", type=float, default=0.9, help="Beta 2 for Adam.")
-parser.add_argument("-sf", "--save_model_filename", type=str, default=None, help="Optional filename to save model.")
-parser.add_argument("-lf", "--load_model_filename", type=str, default=None, help="Optional filename to load model.")
-parser.add_argument("-ffn", "--feed_forward_network", type=str, default=None,
-                    help="Optional feed forward network to use as evaluation metric")
-parser.add_argument("-ddir", "--data_dir", type=str, help="Root directory of dataset.")
-parser.add_argument("-tb", "--tensorboard", type=bool, default=False, help="Write training results to tensorboard.")
-parser.add_argument("-cbn", "--use_cbn", type=str, default="False", help="Use conditional batch normalization.")
-parser.add_argument("-lp", "--use_label_projection", type=str, default="True", help="Use label projection.")
-parser.add_argument("-em", "--use_embedding_network", type=str, default="True", help="Use embedding network.")
-# Parse given command line arguments
+parser.add_argument("-s", "--settings", type=str, default="./settings/wgan_gp_example-yaml", help="Path to a settings.yaml file.")
 args = parser.parse_args()
 
+settings = load_yaml(args.settings)
+
 # Import desired model
-model_type = args.architecture
+model_type = settings["architecture"]
 if model_type == "dc":
     from src.gan.dcgan import DCGANGenerator as Generator, DCGANCritic as Critic
 elif model_type == "fc":
@@ -61,16 +60,16 @@ IMAGE_SIZE = 128
 Z_DIM = 100
 
 # Hyperparameters according to WGAN-paper
-LEARNING_RATE = args.learning_rate
-B1 = args.beta1
-B2 = args.beta2
-BATCH_SIZE = args.batch_size
-EPOCHS = args.epochs
+LEARNING_RATE = settings["learning_rate"]
+B1 = settings["beta1"]
+B2 = settings["beta2"]
+BATCH_SIZE = settings["batch_size"]
+EPOCHS = settings["epochs"]
 
 # Setup dataloader
 # "data/dimer_cylinder_train_val_test/" for example. Expects to find training, validation, and test directories
-variable = DimerVariable.keymap(args.variable)
-root_dir = Path(args.data_dir)
+variable = DimerVariable.keymap(settings["variable"])
+root_dir = Path(settings["data_dir"])
 train_dir = root_dir.joinpath(Path("training/featherfiles/"))
 val_dir = root_dir.joinpath(Path("validation/featherfiles/"))
 
@@ -86,15 +85,15 @@ validation_loader = DataLoader(validation_dataset, batch_size=BATCH_SIZE, sample
                                pin_memory=True, num_workers=NUM_WORKERS, persistent_workers=True)
 
 # Model
-if args.use_label_projection == "True":
+if settings["use_label_projection"] == "True":
     use_lp = True
 else:
     use_lp = False
-if args.use_cbn == "True":
+if settings["use_cbn"] == "True":
     use_cbn = True
 else:
     use_cbn = False
-if args.use_embedding_network == "True":
+if settings["use_embedding_network"] == "True":
     use_embedding_net = True
 else:
     use_embedding_net = False
@@ -134,8 +133,8 @@ generator_optim = Adam(generator.parameters(), lr=LEARNING_RATE, betas=(B1, B2))
 
 # Optional feed forward network to use as evaluation metric
 forward_network = None
-if args.feed_forward_network is not None:
-    checkpoint = torch.load(args.feed_forward_network, map_location=device)
+if settings["feed_forward_network"] is not None:
+    checkpoint = torch.load(settings["feed_forward_network"], map_location=device)
     try:
         if variable == DimerVariable.ALL:
             forward_network = EfficientNetRegressionV3General(CHANNELS, Y_DIM, activation=Softplus(),
@@ -178,9 +177,9 @@ if args.feed_forward_network is not None:
             raise Exception("The feed forward network is not of type EffNetV2 or EffNet. Can also be that variable is not supported.")
 
 # Train model
-save_model_filename = args.save_model_filename
-load_model_filename = args.load_model_filename
+save_model_filename = settings["save_model_filename"]
+load_model_filename = settings["load_model_filename"]
 gan_trainer = WGANTrainer(critic, generator, critic_optim, generator_optim, training_loader, validation_loader, device,
                           load_model_filename=load_model_filename, save_model_filename=save_model_filename,
-                          forward_network=forward_network, write_to_tensorboard=args.tensorboard)
+                          forward_network=forward_network, write_to_tensorboard=settings["tensorboard"])
 gan_trainer.train_model(EPOCHS)
