@@ -29,7 +29,7 @@ class DCGANDiscriminator128(nn.Module):
             snorm(nn.Conv2d(features * 16, features * 32, kernel_size=4, stride=2, padding=1, bias=False)),   # 8x8
             nn.InstanceNorm2d(features * 32, affine=True),
             nn.LeakyReLU(SLOPE),
-            snorm(nn.Conv2d(features * 64, features * 64, kernel_size=4, stride=2, padding=1, bias=False)),  # 4x4
+            snorm(nn.Conv2d(features * 32, features * 64, kernel_size=4, stride=2, padding=1, bias=False)),  # 4x4
             nn.InstanceNorm2d(features * 64, affine=True),
             nn.LeakyReLU(SLOPE),
             snorm(nn.Conv2d(features * 64, y_dim, kernel_size=4, stride=2, padding=0, bias=False)),   # 1x1
