@@ -6,7 +6,7 @@ SLOPE = 0.2
 
 class LabelEmbeddingNetwork(nn.Module):
 
-    def __init__(self, proj_dim, channels=2, activation=nn.LeakyReLU(SLOPE), features=4):
+    def __init__(self, proj_dim, channels=2, activation=nn.LeakyReLU(SLOPE), features=4, dropout_rate=0.5):
         super().__init__()
 
         self.label_transform = nn.Sequential(
@@ -28,6 +28,7 @@ class LabelEmbeddingNetwork(nn.Module):
             # OBS! Kernel size = 5, is an adhoc solution for y.shape = (B, C, 81)
             nn.AvgPool1d(kernel_size=5, stride=1, padding=0),
             nn.Flatten(start_dim=1),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=features * 128, out_features=proj_dim),
             activation
         )

@@ -8,7 +8,7 @@ class FullyConnectedGenerator(nn.Module):
     # Adds a more exotic way to input the labels to the generator
 
     def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=41, features=4, image_size=128, proj_dim=50,
-                 embed=True):
+                 embed=True, dropout_rate=0.5):
         super().__init__()
 
         self.z_dim = z_dim
@@ -34,13 +34,14 @@ class FullyConnectedGenerator(nn.Module):
         )
 
         # Label embedding network
-        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU())
+        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU(), dropout_rate=dropout_rate)
 
         # Prepare for addition layer
         self.add_layer = nn.Sequential(
             nn.Flatten(start_dim=1),
             nn.Linear(in_features=target_channels * y_dim, out_features=target_channels * y_dim),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
             nn.ReLU()
         )

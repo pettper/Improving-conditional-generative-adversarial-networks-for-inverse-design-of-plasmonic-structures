@@ -24,7 +24,7 @@ class DCGANGenerator(nn.Module):
             nn.Linear(in_features=z_dim, out_features=proj_dim),
             nn.ReLU(),
         )
-        self.label_embedding = LabelEmbeddingNetwork(self.proj_dim, channels=target_channels, activation=nn.ReLU())
+        self.label_embedding = LabelEmbeddingNetwork(self.proj_dim, channels=target_channels, activation=nn.ReLU(), dropout_rate=dropout_rate)
 
         if self.image_size == 64:
             self.upsampling_block = DCGANGenerator64(out_channels)

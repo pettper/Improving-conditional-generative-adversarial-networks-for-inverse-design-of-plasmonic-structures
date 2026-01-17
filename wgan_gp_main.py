@@ -59,7 +59,7 @@ CHANNELS = 2
 Y_DIM = 81
 IMAGE_SIZE = 128
 Z_DIM = 100
-FEATURES=1
+FEATURES=settings["feature_scaling"]
 
 # Hyperparameters according to WGAN-paper
 LEARNING_RATE = settings["learning_rate"]
@@ -67,6 +67,7 @@ B1 = settings["beta1"]
 B2 = settings["beta2"]
 BATCH_SIZE = settings["batch_size"]
 EPOCHS = settings["epochs"]
+DROPOUT_RATE = settings["dropout_rate"]
 
 # Setup dataloader
 # "data/dimer_cylinder_train_val_test/" for example. Expects to find training, validation, and test directories
@@ -111,13 +112,13 @@ print(f"Use embedding network: {use_embedding_net}")
 print(f"Use conditional batch normalization: {use_cbn}")
 # Create models
 critic = Critic(CHANNELS, target_channels=variable.size(), image_size=IMAGE_SIZE, features=FEATURES,
-                lp=use_lp, embed=use_embedding_net).to(device)
+                lp=use_lp, embed=use_embedding_net, dropout_rate=DROPOUT_RATE).to(device)
 if model_type == "dc":
     generator = Generator(CHANNELS, target_channels=variable.size(), y_dim=Y_DIM, z_dim=Z_DIM, image_size=IMAGE_SIZE,
-                          features=FEATURES, use_cbn=use_cbn).to(device)
+                          features=FEATURES, use_cbn=use_cbn, dropout_rate=DROPOUT_RATE).to(device)
 else:
     generator = Generator(CHANNELS, target_channels=variable.size(), y_dim=Y_DIM, z_dim=Z_DIM,
-                          image_size=IMAGE_SIZE, features=FEATURES).to(device)
+                          image_size=IMAGE_SIZE, features=FEATURES, dropout_rate=DROPOUT_RATE).to(device)
 
 # Initialize weights
 initialize_dcgan_weights(critic)

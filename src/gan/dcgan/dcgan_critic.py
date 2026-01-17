@@ -9,7 +9,7 @@ SLOPE = 0.2
 class DCGANCritic(nn.Module):
 
     def __init__(self, inp_channels, target_channels=2, y_dim=81, proj_dim=50, image_size=64, features=4, lp=True,
-                 embed=True):
+                 embed=True, dropout_rate=0.5):
         super().__init__()
 
         self.image_size = image_size
@@ -26,13 +26,15 @@ class DCGANCritic(nn.Module):
         # Label embedding layer
         self.label_embedding = LabelEmbeddingNetwork(proj_dim=proj_dim,
                                                      channels=target_channels,
-                                                     activation=nn.LeakyReLU(SLOPE))
+                                                     activation=nn.LeakyReLU(SLOPE),
+                                                     dropout_rate=dropout_rate)
 
         # Prepare for addition layer
         self.add_layer = nn.Sequential(
             nn.Flatten(start_dim=1),
             nn.Linear(in_features=target_channels * y_dim, out_features=target_channels * y_dim),
             nn.LeakyReLU(SLOPE),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
             nn.LeakyReLU(SLOPE)
         )
@@ -42,8 +44,10 @@ class DCGANCritic(nn.Module):
             nn.Flatten(start_dim=1),
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.LeakyReLU(SLOPE),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.LeakyReLU(SLOPE),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=proj_dim, out_features=1)
         )
 

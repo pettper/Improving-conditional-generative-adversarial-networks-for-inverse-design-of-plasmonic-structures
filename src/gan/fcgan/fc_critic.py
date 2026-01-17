@@ -6,7 +6,7 @@ from src.gan.utils import LabelEmbeddingNetwork
 class FullyConnectedCritic(nn.Module):
 
     def __init__(self, in_channels, target_channels=2, y_dim=81,  image_size=128, proj_dim=50, features=4, lp=True,
-                 embed=True):
+                 embed=True, dropout_rate=0.5):
         super().__init__()
 
         self.image_size = image_size
@@ -29,13 +29,14 @@ class FullyConnectedCritic(nn.Module):
         )
 
         # Label embedding layer
-        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU())
+        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU(), dropout_rate=dropout_rate)
 
         # Prepare for addition layer
         self.add_layer = nn.Sequential(
             nn.Flatten(start_dim=1),
             nn.Linear(in_features=target_channels * y_dim, out_features=target_channels * y_dim),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
             nn.ReLU()
         )
@@ -44,8 +45,10 @@ class FullyConnectedCritic(nn.Module):
         self.output_layer = nn.Sequential(
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=proj_dim, out_features=1)
         )
 
