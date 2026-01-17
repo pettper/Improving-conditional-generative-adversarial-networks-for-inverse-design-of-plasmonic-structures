@@ -1,4 +1,4 @@
-architecture: fc
+architecture: dc
 variable: cross
 
 epochs: 1000
@@ -12,9 +12,9 @@ load_model_filename: null
 
 feed_forward_network: null
 
-data_dir: null
+data_dir: "data/anisotropic_au_structures_train_val_test/"
 
-tensorboard: false
+tensorboard: true
 
 use_cbn: "False"
 use_label_projection: "True"
