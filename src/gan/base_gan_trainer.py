@@ -124,6 +124,11 @@ class BaseGanTrainer:
         else:
             filename = self.save_model_filename
 
+        # Make sure there is an available directory
+        parent_dir = os.path.dirname(filename)
+        if not os.path.exists(parent_dir):
+            os.mkdir(parent_dir)
+
         torch.save(state, filename)
         print(f"Saved checkpoint to, \"{filename}\"")
 
