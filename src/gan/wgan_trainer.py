@@ -3,6 +3,7 @@ import torch
 from torch.nn import L1Loss
 from src.utils import gradient_penalty, print_gan_losses, estimate_reconstruction_error, estimate_forward_error
 from src.gan.base_gan_trainer import BaseGanTrainer
+import os
 
 # PARAMETERS
 Z_DIM = 100
@@ -71,6 +72,7 @@ class WGANTrainer(BaseGanTrainer):
     def train_model(self, epochs):
 
         epoch_times = torch.zeros(epochs)
+        best_val_rce_mean = 1e100 # Start with something large
 
         # Train the model for 'epochs' number of epochs
         for epoch in range(epochs):
@@ -102,17 +104,18 @@ class WGANTrainer(BaseGanTrainer):
             # Monitor the reconstruction error every 50th epoch
             if epoch % 50 == 0:
                 # On training data...
-                train_rce_mean, train_rce_var = estimate_reconstruction_error(self.generator, self.training_loader,
+                train_rce_mean, train_rce_var, train_struct_rce_mean, train_struct_rce_var = estimate_reconstruction_error(self.generator, self.training_loader,
                                                                               self.device, metric=L1Loss())
                 # On validation data...
-                val_rce_mean, val_rce_var = estimate_reconstruction_error(self.generator, self.validation_loader,
+                val_rce_mean, val_rce_var, val_struct_rce_mean, val_struct_rce_var = estimate_reconstruction_error(self.generator, self.validation_loader,
                                                                           self.device, metric=L1Loss())
                 
                 self.reconstruction_error.append([self.last_epoch + epoch, train_rce_mean, train_rce_var, val_rce_mean,
-                                                  val_rce_var])
+                                                  val_rce_var, train_struct_rce_mean, train_struct_rce_var, val_struct_rce_mean,
+                                                  val_struct_rce_var])
                 
                 if self.write_images_to_tensorboard:
-                    self.write_reconstruction_error_to_tensorboard(self.last_epoch + epoch, val_rce_mean, val_rce_var)
+                    self.write_reconstruction_error_to_tensorboard(self.last_epoch + epoch, train_rce_mean, val_rce_mean, train_struct_rce_mean, val_struct_rce_mean)
 
                 # If a forward network is provided, store the forward error
                 if self.forward_network is not None:
@@ -127,8 +130,12 @@ class WGANTrainer(BaseGanTrainer):
                                                       val_cnn_error])
 
             # Save model on last epoch and every 50th
-            if ((epoch + 1) == epochs or epoch % 50 == 0) and self.save_model_filename:
-                self.save_checkpoint()
+            if self.save_model_filename:
+                if (epoch + 1) == epochs:
+                    self.save_checkpoint(suffix=f"_last_{epoch}")
+                elif epoch % 50 == 0 and val_rce_mean < best_val_rce_mean:
+                    self.save_checkpoint(suffix=f"_best_epoch_{epoch}")
+                    best_val_rce_mean = val_rce_mean
 
         # Flush and close
         self.writer.flush()

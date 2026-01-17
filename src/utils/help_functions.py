@@ -23,6 +23,26 @@ def initialize_dcgan_weights(model):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
 
 
+def add_filename_suffix(filepath, suffix):
+    """
+    Adds a suffix to a filename while preserving directory paths 
+    and multi-part extensions (e.g., .pth.tar).
+    """
+    path = Path(filepath)
+    
+    # path.parent is the directory (e.g., 'checkpoints/models')
+    # path.suffixes gets all extensions (e.g., ['.pth', '.tar'])
+    # path.name.split('.')[0] gets the base name (e.g., 'wgan_dc_cross_all_TT')
+    
+    base_name = path.name.split('.')[0]
+    extensions = "".join(path.suffixes)
+    
+    # Combine back into a new Path object
+    new_path = path.parent / f"{base_name}{suffix}{extensions}"
+    
+    return str(new_path)
+
+
 def gradient_penalty(critic_model, interpolated_im, labels):
     # Returns the gradient penalty term in the loss for WGAN-GP
     critic = critic_model(interpolated_im, labels)
@@ -95,24 +115,51 @@ def decoder_penalty_v2(autoencoder, input_tensor, device):
 
 
 def estimate_reconstruction_error(generator, data_loader, device, metric=nn.MSELoss(), n=30):
+    """ 
+    This function computes the reconstruction MAE between real and fake images.
+    This function also computes the reconstruction MAE using pixel with a 
+    structure / prediction of a structure.
+    """
     generator.eval()
     z_dim = generator.get_z_dim()
     with torch.no_grad():
         # Get n samples of mean squared error between real and fake images.
         losses = torch.zeros(n, 1)
+        struct_losses = torch.zeros(n,1)
         for t in range(n):
             running_loss = 0.0
+            struct_running_loss = 0.0
             it = 0
             for i, (real, labels) in enumerate(data_loader):
                 real, labels = real.to(device), labels.to(device)
                 batch_size = real.shape[0]
                 z = torch.normal(0, 1, size=(batch_size, z_dim)).to(device)
                 fake = generator(z, labels)
+
+                # Part 1, compute full image reconstruction error
                 running_loss += metric(real, fake)  # Mean over batch
+
+                # Part 2, compute structural/masked reconstruction error
+                # Mask out pixel with no structure/ no prediction of a structure
+                real_binary_channel = real[:,0,:,:].unsqueeze(1)
+                fake_binary_channel = torch.round(fake[:,0,:,:]).unsqueeze(1)
+                mask = (real_binary_channel > -1.0) | (fake_binary_channel > -1.0)
+                mask = mask.float() # So that we can make the below calculations
+
+                # Calculate a masked MAE
+                abs_error = torch.abs(real - fake)
+                if mask.sum() > 0:
+                    number_of_channels = real.shape[1] 
+                    struct_mae = (abs_error * mask).sum() / (mask.sum() * number_of_channels)
+                else:
+                    struct_mae = 0
+                struct_running_loss += struct_mae
+
                 it += 1
             losses[t] = running_loss / it   # Average over batches
+            struct_losses[t] = struct_running_loss / it
         # Return mean and variance of n samples...
-        return losses.mean().item(), losses.var().item()
+        return losses.mean().item(), losses.var().item(), struct_losses.mean().item(), struct_losses.var().item()
 
 
 def estimate_forward_error(generator, data_loader, device, forward_network, n=30):

@@ -3,6 +3,7 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import numpy as np
 from torchvision.utils import make_grid
+from src.utils import add_filename_suffix
 
 # Set seed
 torch.manual_seed(23)
@@ -100,12 +101,14 @@ class BaseGanTrainer:
         self.writer.add_image("Validation_Image/Real", val_img_grid_real, epoch)
         self.writer.add_image("Validation_Image/Fake", val_img_grid_fake, epoch)
 
-    def write_reconstruction_error_to_tensorboard(self, epoch, rce_mean, rce_var):
+    def write_reconstruction_error_to_tensorboard(self, epoch, train_rce, val_rce, train_struct_rce, val_struct_rce):
         if self.write_to_tensorboard:
-            self.writer.add_scalar("Reconstruction_error/Mean", rce_mean, epoch)
-            self.writer.add_scalar("Reconstruction_error/Variance", rce_var, epoch)
+            self.writer.add_scalar("Reconstruction_error/Training", train_rce, epoch)
+            self.writer.add_scalar("Reconstruction_error/Validation", val_rce, epoch)
+            self.writer.add_scalar("Structural_Reconstruction_error/Training", train_struct_rce, epoch)
+            self.writer.add_scalar("Structural_Reconstruction_error/Validation", val_struct_rce, epoch)
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, suffix=None):
         state = {
             'generator_state_dict': self.generator.state_dict(),
             'generator_optimizer_state_dict': self.gen_optim.state_dict(),
@@ -115,8 +118,14 @@ class BaseGanTrainer:
             'forward_error': np.array(self.forward_error_values),
             'wasserstein_distance': self.wasserstein_distance
         }
-        torch.save(state, self.save_model_filename)
-        print(f"Saved checkpoint to, \"{self.save_model_filename}\"")
+
+        if suffix is not None:
+            filename = add_filename_suffix(self.save_model_filename, suffix)
+        else:
+            filename = self.save_model_filename
+
+        torch.save(state, filename)
+        print(f"Saved checkpoint to, \"{filename}\"")
 
     def load_checkpoint(self, filename):
         checkpoint = torch.load(filename)
