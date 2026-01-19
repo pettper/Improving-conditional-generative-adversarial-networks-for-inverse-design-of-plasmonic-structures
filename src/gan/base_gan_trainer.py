@@ -177,7 +177,7 @@ class BaseGanTrainer:
         print(f'Saved checkpoint to, "{filename}"')
 
     def load_checkpoint(self, filename):
-        checkpoint = torch.load(filename)
+        checkpoint = torch.load(filename, weights_only=False)
         self.generator.load_state_dict(checkpoint["generator_state_dict"])
         self.gen_optim.load_state_dict(checkpoint["generator_optimizer_state_dict"])
         self.critic.load_state_dict(checkpoint["critic_state_dict"])

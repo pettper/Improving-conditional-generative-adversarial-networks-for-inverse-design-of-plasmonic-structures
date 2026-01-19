@@ -390,7 +390,7 @@ def print_gan_losses(epoch, losses, time):
 
 
 def load_pretrained_h2y(filename, model):
-    checkpoint = torch.load(filename)
+    checkpoint = torch.load(filename, weights_only=False)
     model.load_state_dict(checkpoint["model_state_dict"])
     return model
 

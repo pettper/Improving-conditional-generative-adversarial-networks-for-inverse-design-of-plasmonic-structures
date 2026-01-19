@@ -219,14 +219,16 @@ class WGANGPMain:
         string for a path to a saved model in a pth.tar-file.
         """
         target_channels, ydim = get_label_size(self.train_loader)
-        target_variable = self.settings["target_variable"]
+        target_variable = DimerVariable.keymap(self.settings["target_variable"])
         im_channels, image_size, _ = get_image_size(self.train_loader)
 
         # Optional feed forward network to use as evaluation metric
         forward_network = None
         if self.settings["feed_forward_network"] is not None:
             checkpoint = torch.load(
-                self.settings["feed_forward_network"], map_location=self.device
+                self.settings["feed_forward_network"],
+                map_location=self.device,
+                weights_only=False,
             )
             try:
                 if (
@@ -260,7 +262,10 @@ class WGANGPMain:
                     "Could not load given forward network as EfficientNet, tries to load as EfficientNetV2..."
                 )
                 try:
-                    if target_variable == DimerVariable.ALL:
+                    if (
+                        target_variable == DimerVariable.ALL
+                        or target_variable == DimerVariable.CROSS_SECTIONS
+                    ):
                         forward_network = EfficientNetV2RegressionGeneral(
                             im_channels,
                             ydim,
