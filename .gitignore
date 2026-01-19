@@ -9,3 +9,4 @@ runs/
 /au_sphere_data_backup/
 /pytorch_env.yml
 /delivery/dropout_experiment/
+/delivery/pretrained_cnn_models/
