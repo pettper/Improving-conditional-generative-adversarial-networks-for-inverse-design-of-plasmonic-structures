@@ -174,15 +174,6 @@ class WGANTrainer(BaseGanTrainer):
                     ]
                 )
 
-                if self.write_images_to_tensorboard:
-                    self.write_reconstruction_error_to_tensorboard(
-                        self.last_epoch + epoch,
-                        train_rce_mean,
-                        val_rce_mean,
-                        train_struct_rce_mean,
-                        val_struct_rce_mean,
-                    )
-
                 # If a forward network is provided, store the forward error
                 if self.forward_network is not None:
                     train_forward_error, train_cnn_error = estimate_forward_error(
@@ -205,6 +196,17 @@ class WGANTrainer(BaseGanTrainer):
                             val_forward_error,
                             val_cnn_error,
                         ]
+                    )
+
+                if self.write_images_to_tensorboard:
+                    self.write_reconstruction_error_to_tensorboard(
+                        self.last_epoch + epoch,
+                        train_rce_mean,
+                        val_rce_mean,
+                        train_struct_rce_mean,
+                        val_struct_rce_mean,
+                        train_cnn_error,
+                        val_cnn_error,
                     )
 
             # Save model on last epoch and every 50th
