@@ -1,4 +1,4 @@
-# Help function library
+import re
 from pathlib import Path
 
 import torch
@@ -33,6 +33,22 @@ def initialize_dcgan_weights(model):
             ),
         ):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
+
+
+def clear_old_files(filepath):
+    """
+    Clear old files with a regex pattern matching the filename provided in 'filepath'
+    """
+    filepath = Path(filepath)
+    clean_name = filepath.name.split(".")[0]
+    pattern = re.compile(rf"{re.escape(clean_name)}.*")
+
+    search_dir = filepath.parent
+
+    for file in search_dir.glob("*.pth.tar"):
+        if file.is_file() and pattern.search(file.name):
+            print(f"Removing file: {file.name}")
+            file.unlink()
 
 
 def add_filename_suffix(filepath, suffix):

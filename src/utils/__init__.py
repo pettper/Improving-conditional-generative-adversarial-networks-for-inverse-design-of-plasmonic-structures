@@ -6,6 +6,7 @@ from .data.dimer_variables import DimerVariable
 from .efficient_net_v2_data import EfficientNetV2Data
 from .help_functions import (
     add_filename_suffix,
+    clear_old_files,
     construct_eff_net_sequence,
     contractive_penalty,
     contractive_penalty_v2,

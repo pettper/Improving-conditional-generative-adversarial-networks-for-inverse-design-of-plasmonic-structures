@@ -1,7 +1,7 @@
-architecture: dc
+architecture: fc
 target_variable: cross
 
-epochs: 1000
+epochs: 150
 batch_size: 64
 learning_rate: 0.0001
 beta1: 0.0
@@ -9,12 +9,12 @@ beta2: 0.9
 dropout_rate: 0.5
 feature_scaling: 1
 
-save_model_filename: null
+save_model_filename: "tmp/my_test.pth.tar"
 load_model_filename: null
 
 feed_forward_network: null
 
-data_dir: "data/anisotropic_au_structures_train_val_test/"
+data_dir: "data/dimer_cylinder_train_val_test/" # "data/anisotropic_au_structures_train_val_test/"
 
 tensorboard: true
 

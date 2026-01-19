@@ -212,7 +212,9 @@ class WGANTrainer(BaseGanTrainer):
                 if (epoch + 1) == epochs:
                     self.save_checkpoint(suffix=f"_last_{epoch + 1}")
                 elif epoch % 50 == 0 and val_rce_mean < best_val_rce_mean:
-                    self.save_checkpoint(suffix=f"_best_epoch_{epoch + 1}")
+                    self.save_checkpoint(
+                        suffix=f"_best_epoch_{epoch + 1}", clear_old=True
+                    )
                     best_val_rce_mean = val_rce_mean
 
         # Flush and close
