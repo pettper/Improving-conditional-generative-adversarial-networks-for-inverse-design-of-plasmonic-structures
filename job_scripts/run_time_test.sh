@@ -1,6 +1,6 @@
 #!/bin/bash
 # Here you should put your own project id
-#SBATCH -A hpc2n2024-042
+#SBATCH -A hpc2n2026-031
 # Allocate GPU and 14 CPU cores
 #SBATCH --gres=gpu:v100:1
 #SBATCH -c 14
