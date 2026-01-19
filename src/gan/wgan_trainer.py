@@ -210,7 +210,12 @@ class WGANTrainer(BaseGanTrainer):
             # Save model on last epoch and every 50th
             if self.save_model_filename:
                 if (epoch + 1) == epochs:
-                    self.save_checkpoint(suffix=f"_last_{epoch + 1}")
+                    if val_rce_mean < best_val_rce_mean:
+                        self.save_checkpoint(
+                            suffix=f"_last=best_{epoch + 1}", clear_old=True
+                        )
+                    else:
+                        self.save_checkpoint(suffix=f"_last_{epoch + 1}")
                 elif epoch % 50 == 0 and val_rce_mean < best_val_rce_mean:
                     self.save_checkpoint(
                         suffix=f"_best_epoch_{epoch + 1}", clear_old=True
