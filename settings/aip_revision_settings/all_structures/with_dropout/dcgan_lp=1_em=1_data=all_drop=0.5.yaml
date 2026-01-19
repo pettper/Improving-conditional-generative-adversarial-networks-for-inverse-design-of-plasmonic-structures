@@ -1,0 +1,17 @@
+target_variable: cross
+epochs: 30000
+batch_size: 64
+learning_rate: 0.0001
+beta1: 0.0
+beta2: 0.9
+feature_scaling: 1
+tensorboard: false
+use_cbn: false
+load_model_filename: null
+dropout_rate: 0.5
+architecture: dc
+data_dir: data/anisotropic_au_structures_train_val_test/
+feed_forward_network: delivery/pretrained_cnn_models/last_epoch_effv2_cross_all_structures_lr00001_drop05.pth.tar
+use_label_projection: true
+use_embedding_network: true
+save_model_filename: tmp/dcgan_lp=1_em=1_data=all_drop=0.5.pth.tar
