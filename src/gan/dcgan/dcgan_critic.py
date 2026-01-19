@@ -8,7 +8,7 @@ SLOPE = 0.2
 
 class DCGANCritic(nn.Module):
 
-    def __init__(self, inp_channels, target_channels=2, y_dim=81, proj_dim=50, image_size=64, features=4, lp=True,
+    def __init__(self, inp_channels, target_channels=2, y_dim=81, proj_dim=50, image_size=128, features=4, lp=True,
                  embed=True, dropout_rate=0.5):
         super().__init__()
 

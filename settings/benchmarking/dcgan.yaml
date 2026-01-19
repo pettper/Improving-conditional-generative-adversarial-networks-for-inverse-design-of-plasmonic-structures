@@ -1,15 +1,15 @@
-architecture: fc
+architecture: dc
 target_variable: cross
 
-epochs: 1000
+epochs: 15
 batch_size: 64
 learning_rate: 0.0001
 beta1: 0.0
 beta2: 0.9
-dropout_rate: 0.0
+dropout_rate: 0.5
 feature_scaling: 1
 
-save_model_filename: delivery/dropout_experiment/fcgan_with_dropout.pth.tar
+save_model_filename: null
 load_model_filename: null
 
 feed_forward_network: null

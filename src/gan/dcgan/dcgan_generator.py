@@ -5,7 +5,7 @@ from src.gan.utils import LabelEmbeddingNetwork
 
 class DCGANGenerator(nn.Module):
 
-    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=41, proj_dim=50, features=4, image_size=64,
+    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=81, proj_dim=50, features=4, image_size=128,
                  use_cbn=False, dropout_rate=0.5):
         super().__init__()
 

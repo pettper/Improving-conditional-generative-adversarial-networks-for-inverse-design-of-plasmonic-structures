@@ -1,5 +1,5 @@
 architecture: fc
-variable: cross
+target_variable: cross
 
 epochs: 1000
 batch_size: 64

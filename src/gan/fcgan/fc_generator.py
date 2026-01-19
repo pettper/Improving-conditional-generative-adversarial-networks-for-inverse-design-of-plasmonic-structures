@@ -7,7 +7,7 @@ from src.gan.utils import LabelEmbeddingNetwork
 class FullyConnectedGenerator(nn.Module):
     # Adds a more exotic way to input the labels to the generator
 
-    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=41, features=4, image_size=128, proj_dim=50,
+    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=81, features=4, image_size=128, proj_dim=50,
                  embed=True, dropout_rate=0.5):
         super().__init__()
 
