@@ -122,6 +122,7 @@ class WGANGPMain:
             pin_memory=True,
             num_workers=self.NUM_WORKERS,
             persistent_workers=True,
+            drop_last=True
         )
         validation_loader = DataLoader(
             validation_dataset,
