@@ -60,10 +60,9 @@ class WGANTrainer(BaseGanTrainer):
             load_model_filename=load_model_filename,
             save_model_filename=save_model_filename,
             write_to_tensorboard=write_to_tensorboard,
-            benchmark=False
         )
 
-    def train_one_epoch(self):
+    def train_one_epoch(self, benchmark=False):
         # Set models to training mode
         self.critic.train(True)
         self.generator.train(True)
@@ -111,8 +110,8 @@ class WGANTrainer(BaseGanTrainer):
             running_wasserstein_distance / it,
         )
 
-    def train_model(self, epochs):
-        if self.benchmark:
+    def train_model(self, epochs, benchmark=False):
+        if benchmark:
             epoch_times = torch.zeros(epochs)
         else:
             epoch_times = None
@@ -123,9 +122,9 @@ class WGANTrainer(BaseGanTrainer):
         for epoch in range(epochs):
             # Train one epoch, collect losses and time
             critic_loss, gen_loss, elapsed, wasserstein_distance = (
-                self.train_one_epoch()
+                self.train_one_epoch(benchmark=benchmark)
             )
-            if self.benchmark:
+            if benchmark:
                 epoch_times[epoch] = elapsed
 
             # Print losses and write images to tensorboard
