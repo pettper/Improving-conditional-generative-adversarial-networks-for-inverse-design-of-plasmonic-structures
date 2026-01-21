@@ -16,7 +16,7 @@ feed_forward_network: null
 
 data_dir: "data/anisotropic_au_structures_train_val_test/"
 
-tensorboard: true
+tensorboard: false
 
 use_cbn: "False"
 use_label_projection: "True"

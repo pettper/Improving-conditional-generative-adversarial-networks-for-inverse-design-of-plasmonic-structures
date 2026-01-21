@@ -175,9 +175,7 @@ class WGANTrainer(BaseGanTrainer):
                 )
 
                 # If a forward network is provided, store the forward error
-                print(self.forward_network)
                 if self.forward_network:
-                    assert(not (self.forward_network is None))
                     train_forward_error, train_cnn_error = estimate_forward_error(
                         self.generator,
                         self.training_loader,
@@ -199,6 +197,10 @@ class WGANTrainer(BaseGanTrainer):
                             val_cnn_error,
                         ]
                     )
+                else:
+                    # To run the code if tensorboard is enabled without forward network
+                    train_cnn_error = 0
+                    val_cnn_error = 0
 
                 if self.write_images_to_tensorboard:
                     self.write_reconstruction_error_to_tensorboard(
