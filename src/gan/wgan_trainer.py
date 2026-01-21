@@ -175,7 +175,9 @@ class WGANTrainer(BaseGanTrainer):
                 )
 
                 # If a forward network is provided, store the forward error
-                if self.forward_network is not None:
+                print(self.forward_network)
+                if self.forward_network:
+                    assert(not (self.forward_network is None))
                     train_forward_error, train_cnn_error = estimate_forward_error(
                         self.generator,
                         self.training_loader,
