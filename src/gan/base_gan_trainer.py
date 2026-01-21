@@ -137,7 +137,14 @@ class BaseGanTrainer:
         self.writer.add_image("Validation_Image/Fake", val_img_grid_fake, epoch)
 
     def write_reconstruction_error_to_tensorboard(
-        self, epoch, train_rce, val_rce, train_struct_rce, val_struct_rce
+        self,
+        epoch,
+        train_rce,
+        val_rce,
+        train_struct_rce,
+        val_struct_rce,
+        train_fwde,
+        val_fwde,
     ):
         if self.write_to_tensorboard:
             self.writer.add_scalar("Reconstruction_error/Training", train_rce, epoch)
@@ -148,6 +155,8 @@ class BaseGanTrainer:
             self.writer.add_scalar(
                 "Structural_Reconstruction_error/Validation", val_struct_rce, epoch
             )
+            self.writer.add_scalar("CNN_forward_error/Training", train_fwde, epoch)
+            self.writer.add_scalar("CNN_forward_error/Validation", val_fwde, epoch)
 
     def save_checkpoint(self, suffix=None, clear_old=False):
         state = {
