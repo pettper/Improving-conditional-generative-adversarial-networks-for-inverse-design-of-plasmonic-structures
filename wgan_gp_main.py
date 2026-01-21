@@ -88,7 +88,7 @@ class WGANGPMain:
 
         # Train WGAN-GP model
         epochs = self.settings["epochs"]
-        epoch_times = gan_trainer.train_model(epochs)
+        epoch_times = gan_trainer.train_model(epochs, benchmark=benchmark)
 
         if benchmark:
             print("--- WGAN-GP RUN TIME TEST ---")
