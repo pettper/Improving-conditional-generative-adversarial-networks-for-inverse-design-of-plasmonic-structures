@@ -87,7 +87,7 @@ validation_dataset = Dataset(val_dir,  # Validation set uses same transforms as 
                              target_transform=lambda x: training_dataset.apply_target_transform(x))
 
 training_loader = DataLoader(training_dataset, batch_size=BATCH_SIZE, sampler=RandomSampler(training_dataset),
-                             pin_memory=True)
+                             pin_memory=True, drop_last=True)
 validation_loader = DataLoader(validation_dataset, batch_size=BATCH_SIZE, sampler=RandomSampler(validation_dataset),
                                pin_memory=True)
 
