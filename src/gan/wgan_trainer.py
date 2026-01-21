@@ -1,5 +1,3 @@
-import time
-
 import torch
 from torch.nn import L1Loss
 
@@ -35,6 +33,7 @@ class WGANTrainer(BaseGanTrainer):
         load_model_filename=None,
         save_model_filename=None,
         write_to_tensorboard=False,
+        benchmark=False
     ):
         """
         Trainer object for training a Wasserstein GAN with gradient penalty
@@ -61,6 +60,7 @@ class WGANTrainer(BaseGanTrainer):
             load_model_filename=load_model_filename,
             save_model_filename=save_model_filename,
             write_to_tensorboard=write_to_tensorboard,
+            benchmark=False
         )
 
     def train_one_epoch(self):
@@ -74,7 +74,15 @@ class WGANTrainer(BaseGanTrainer):
         running_wasserstein_distance = 0
         it = 0
 
-        start = time.perf_counter()
+        # Initialize timing with cuda event, for most accurate measure
+        if self.benchmark:
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+            start.record()
+        else:
+            elapsed=0 # Set a default value
+
+        # Start of epoch training step
         for i, (images, labels) in enumerate(self.training_loader):
             # Send to device
             images, labels = images.to(self.device), labels.to(self.device)
@@ -90,8 +98,12 @@ class WGANTrainer(BaseGanTrainer):
             # Train the generator
             running_gen_loss += self.train_generator(labels)
             it += 1
-        end = time.perf_counter()
-        elapsed = end - start
+
+        # Record time measurement
+        if self.benchmark:
+            end.record()
+            torch.cuda.synchronize()
+            elapsed = 0.001 * start.elapsed_time(end)
         return (
             running_critic_loss / it,
             running_gen_loss / it,
@@ -99,8 +111,8 @@ class WGANTrainer(BaseGanTrainer):
             running_wasserstein_distance / it,
         )
 
-    def train_model(self, epochs, benchmark=False):
-        if benchmark:
+    def train_model(self, epochs):
+        if self.benchmark:
             epoch_times = torch.zeros(epochs)
         else:
             epoch_times = None
@@ -113,7 +125,7 @@ class WGANTrainer(BaseGanTrainer):
             critic_loss, gen_loss, elapsed, wasserstein_distance = (
                 self.train_one_epoch()
             )
-            if benchmark:
+            if self.benchmark:
                 epoch_times[epoch] = elapsed
 
             # Print losses and write images to tensorboard
