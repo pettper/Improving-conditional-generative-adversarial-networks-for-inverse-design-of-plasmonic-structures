@@ -30,7 +30,7 @@ torch.backends.cudnn.benchmark = True
 
 
 class WGANGPMain:
-    NUM_WORKERS = 8  # Parallelism for data loaders
+    NUM_WORKERS = 12  # Parallelism for data loaders
     EXPECTED_KEYS = [
         "architecture",
         "target_variable",
