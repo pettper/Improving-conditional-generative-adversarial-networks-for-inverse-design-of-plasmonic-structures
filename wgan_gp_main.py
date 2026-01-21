@@ -84,11 +84,12 @@ class WGANGPMain:
             save_model_filename=self.settings["save_model_filename"],
             forward_network=self.forward_network,
             write_to_tensorboard=self.settings["tensorboard"],
+            benchmark=benchmark
         )
 
         # Train WGAN-GP model
         epochs = self.settings["epochs"]
-        epoch_times = gan_trainer.train_model(epochs, benchmark=benchmark)
+        epoch_times = gan_trainer.train_model(epochs)
 
         if benchmark:
             print("--- WGAN-GP RUN TIME TEST ---")

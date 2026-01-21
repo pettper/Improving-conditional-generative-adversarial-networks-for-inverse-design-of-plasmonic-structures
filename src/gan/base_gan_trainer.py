@@ -31,6 +31,7 @@ class BaseGanTrainer:
         load_model_filename=None,
         save_model_filename=None,
         write_to_tensorboard=False,
+        benchmark=False
     ):
         """
         Trainer object for training a Wasserstein GAN with gradient penalty
@@ -59,6 +60,7 @@ class BaseGanTrainer:
         self.forward_error_values = []
         self.wasserstein_distance = []
         self.last_epoch = 0
+        self.benchmark=benchmark
 
         if load_model_filename:
             self.load_checkpoint(load_model_filename)
