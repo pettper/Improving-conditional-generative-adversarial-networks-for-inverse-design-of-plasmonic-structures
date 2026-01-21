@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=l40s:1
 #SBATCH -c 24
 # Ask for a suitable amount of time. Remember, this is the time the Jupyter notebook will be available!
-#SBATCH --time=$2
+#SBATCH --time=01:00:00
 # Name of job
 #SBATCH -J ml_pytorch
 # Send mail when job begins
