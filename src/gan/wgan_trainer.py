@@ -33,7 +33,6 @@ class WGANTrainer(BaseGanTrainer):
         load_model_filename=None,
         save_model_filename=None,
         write_to_tensorboard=False,
-        benchmark=False
     ):
         """
         Trainer object for training a Wasserstein GAN with gradient penalty
@@ -74,7 +73,7 @@ class WGANTrainer(BaseGanTrainer):
         it = 0
 
         # Initialize timing with cuda event, for most accurate measure
-        if self.benchmark:
+        if benchmark:
             start = torch.cuda.Event(enable_timing=True)
             end = torch.cuda.Event(enable_timing=True)
             start.record()
@@ -99,7 +98,7 @@ class WGANTrainer(BaseGanTrainer):
             it += 1
 
         # Record time measurement
-        if self.benchmark:
+        if benchmark:
             end.record()
             torch.cuda.synchronize()
             elapsed = 0.001 * start.elapsed_time(end)
