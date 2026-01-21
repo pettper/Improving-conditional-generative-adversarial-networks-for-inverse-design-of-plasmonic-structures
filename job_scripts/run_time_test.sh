@@ -3,7 +3,7 @@
 #SBATCH -A hpc2n2026-031
 # Ask for 1 Nvidia l40s gpu node
 #SBATCH --gpus-per-node=l40s:1
-#SBATCH -c 14
+#SBATCH -c 24
 # Ask for a suitable amount of time. Remember, this is the time the Jupyter notebook will be available!
 #SBATCH --time=00:05:00
 # Name of job
