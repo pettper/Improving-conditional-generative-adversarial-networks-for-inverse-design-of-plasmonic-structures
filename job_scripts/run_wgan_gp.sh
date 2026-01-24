@@ -21,6 +21,5 @@ ml Arrow/14.0.1 PyYAML/6.0 matplotlib/3.7.2 tensorboard/2.15.1
 
 # Run WGAN-GP with settings provided by first argument
 mkdir -p tmp/
-rm -r tmp/*
 python wgan_gp_main.py -s $1
 mv tmp/* delivery/
