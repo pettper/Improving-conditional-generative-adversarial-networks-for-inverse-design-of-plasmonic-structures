@@ -35,12 +35,12 @@ def initialize_dcgan_weights(model):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
 
 
-def clear_old_files(filepath):
+def clear_old_files(filepath, extensions=".pth.tar"):
     """
     Clear old files with a regex pattern matching the filename provided in 'filepath'
     """
     filepath = Path(filepath)
-    clean_name = filepath.name.split(".")[0]
+    clean_name = filepath.name.removesuffix(extensions)
     pattern = re.compile(rf"{re.escape(clean_name)}.*")
 
     search_dir = filepath.parent
@@ -51,7 +51,7 @@ def clear_old_files(filepath):
             file.unlink()
 
 
-def add_filename_suffix(filepath, suffix):
+def add_filename_suffix(filepath, suffix, extensions=".pth.tar"):
     """
     Adds a suffix to a filename while preserving directory paths
     and multi-part extensions (e.g., .pth.tar).
@@ -59,11 +59,9 @@ def add_filename_suffix(filepath, suffix):
     path = Path(filepath)
 
     # path.parent is the directory (e.g., 'checkpoints/models')
-    # path.suffixes gets all extensions (e.g., ['.pth', '.tar'])
-    # path.name.split('.')[0] gets the base name (e.g., 'wgan_dc_cross_all_TT')
+    # path.name.removesuffix(extensions) gets the base name (e.g., 'wgan_dc_cross_all_TT')
 
-    base_name = path.name.split(".")[0]
-    extensions = "".join(path.suffixes)
+    base_name = path.name.removesuffix(extensions)
 
     # Combine back into a new Path object
     new_path = path.parent / f"{base_name}{suffix}{extensions}"
