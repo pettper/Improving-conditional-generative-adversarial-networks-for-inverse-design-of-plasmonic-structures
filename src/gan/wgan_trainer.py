@@ -78,7 +78,7 @@ class WGANTrainer(BaseGanTrainer):
             end = torch.cuda.Event(enable_timing=True)
             start.record()
         else:
-            elapsed=0 # Set a default value
+            elapsed = 0  # Set a default value
 
         # Start of epoch training step
         for i, (images, labels) in enumerate(self.training_loader):
@@ -120,8 +120,8 @@ class WGANTrainer(BaseGanTrainer):
         # Train the model for 'epochs' number of epochs
         for epoch in range(epochs):
             # Train one epoch, collect losses and time
-            critic_loss, gen_loss, elapsed, wasserstein_distance = (
-                self.train_one_epoch(benchmark=benchmark)
+            critic_loss, gen_loss, elapsed, wasserstein_distance = self.train_one_epoch(
+                benchmark=benchmark
             )
             if benchmark:
                 epoch_times[epoch] = elapsed
@@ -228,13 +228,13 @@ class WGANTrainer(BaseGanTrainer):
                 if (epoch + 1) == epochs:
                     if val_rce_mean < best_val_rce_mean:
                         self.save_checkpoint(
-                            suffix=f"_last=best_{epoch + 1}", clear_old=True
+                            suffix=f"_last=best_{epoch + 1}", clear_old=False
                         )
                     else:
                         self.save_checkpoint(suffix=f"_last_epoch_{epoch + 1}")
                 elif epoch % 50 == 0 and val_rce_mean < best_val_rce_mean:
                     self.save_checkpoint(
-                        suffix=f"_best_epoch_{epoch + 1}", clear_old=True
+                        suffix=f"_best_epoch_{epoch + 1}", clear_old=False
                     )
                     best_val_rce_mean = val_rce_mean
 
