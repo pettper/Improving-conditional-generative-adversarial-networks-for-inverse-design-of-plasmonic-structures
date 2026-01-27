@@ -18,6 +18,9 @@ N_CRITIC = 5
 N_IMAGES = 16  # Number of validation images to generate
 fixed_noise = torch.normal(0, 1, size=(N_IMAGES, Z_DIM))
 
+# SAVE EVERY 100th epoch
+SAVE_EVERY_NTH = 100
+
 
 class WGANTrainer(BaseGanTrainer):
     def __init__(
@@ -149,8 +152,8 @@ class WGANTrainer(BaseGanTrainer):
             The contents in the below if statement are very slow
             Tests show that for the full dataset ~3000 samples. It takes ~4.5 seconds to evaluate it.
             """
-            # Monitor the reconstruction error every 50th epoch
-            if epoch % 50 == 0:
+            # Monitor the reconstruction error
+            if epoch % SAVE_EVERY_NTH == 0:
                 # On training data...
                 (
                     train_rce_mean,
@@ -223,7 +226,7 @@ class WGANTrainer(BaseGanTrainer):
                         val_cnn_error,
                     )
 
-            # Save model on last epoch and every 50th
+            # Save model on last epoch and every SAVE_EVERY_NTH epoch
             if self.save_model_filename:
                 if (epoch + 1) == epochs:
                     if val_rce_mean < best_val_rce_mean:
@@ -232,7 +235,7 @@ class WGANTrainer(BaseGanTrainer):
                         )
                     else:
                         self.save_checkpoint(suffix=f"_last_epoch_{epoch + 1}")
-                elif epoch % 50 == 0 and val_rce_mean < best_val_rce_mean:
+                elif epoch % SAVE_EVERY_NTH == 0 and val_rce_mean < best_val_rce_mean:
                     self.save_checkpoint(
                         suffix=f"_best_epoch_{epoch + 1}", clear_old=False
                     )
