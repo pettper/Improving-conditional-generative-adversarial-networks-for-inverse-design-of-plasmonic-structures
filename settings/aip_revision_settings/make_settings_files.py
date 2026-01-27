@@ -2,7 +2,7 @@ import yaml
 
 settings = {}
 settings["target_variable"] = "cross"
-settings["epochs"] = 30000
+settings["epochs"] = 20000
 settings["batch_size"] = 64
 settings["learning_rate"] = 0.0001
 settings["beta1"] = 0.0

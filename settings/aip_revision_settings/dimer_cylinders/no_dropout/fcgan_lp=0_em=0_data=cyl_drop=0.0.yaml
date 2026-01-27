@@ -1,5 +1,5 @@
 target_variable: cross
-epochs: 30000
+epochs: 20000
 batch_size: 64
 learning_rate: 0.0001
 beta1: 0.0
