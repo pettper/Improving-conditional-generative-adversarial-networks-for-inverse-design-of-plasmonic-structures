@@ -7,12 +7,12 @@ settings["batch_size"] = 64
 settings["learning_rate"] = 0.0001
 settings["beta1"] = 0.0
 settings["beta2"] = 0.9
-settings["feature_scaling"] = 1
+settings["feature_scaling"] = 4
 settings["tensorboard"] = False
 settings["use_cbn"] = False
 settings["load_model_filename"] = None
 
-arch = ["fc", "dc"]
+arch = ["fc"]
 dropout_rate = [0.0, 0.5]
 feed_forward_network = [
     "delivery/pretrained_cnn_models/last_epoch_effv2_cross_dimer_cylinders_lr00001_drop05.pth.tar",
@@ -49,7 +49,8 @@ for dr in dropout_rate:
                         + f"lp={int(lp)}_"
                         + f"em={int(em)}_"
                         + f"data={data}_"
-                        + f"drop={dr}"
+                        + f"drop={dr}_"
+                        + f"feat={settings['feature_scaling']}"
                     )
                     settings["save_model_filename"] = "tmp/" + filename + ".pth.tar"
 
