@@ -3,11 +3,17 @@ from pathlib import Path
 import torch
 from cycler import cycler
 from matplotlib import pyplot as plt
+from torch.nn import Softplus
 from torch.utils.data import DataLoader, RandomSampler
+
+from plots.plot_help_functions import (
+    gan_big_prediction_plot,
+    gan_prediction_comparison,
+    gan_single_prediction_plot,
+)
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
 from src.utils import get_image_size, get_label_size, moving_average
-from plots.plot_help_functions import gan_single_prediction_plot, gan_prediction_comparison, gan_big_prediction_plot
 
 torch.manual_seed(23)
 
@@ -28,9 +34,9 @@ class GANPlotter:
         fcgan_checkpoints_dict,
         dcgan_checkpoints_dict,
         forward_network,
-        train_dataset=None,
-        val_dataset=None,
-        test_dataset=None,
+        train_dataset,
+        val_dataset,
+        test_dataset,
         fcgan_feature_scaling=1,
         dcgan_feature_scaling=1,
         device="cpu",
@@ -48,7 +54,6 @@ class GANPlotter:
         """
         self.device = device
         self.savefig_dir = savefig_dir
-        self.forward_network = forward_network
 
         # Load checkpoints and dropout rates
         self.fcgan_checkpoints = self._load_checkpoints(fcgan_checkpoints_dict)
@@ -61,6 +66,9 @@ class GANPlotter:
         self.train_loader = GANPlotter._setup_data_loader(self.train_dataset)
         self.val_loader = GANPlotter._setup_data_loader(self.val_dataset)
         self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
+
+        # Forward network is used for evaluation
+        self.forward_network = self._load_forward_network(forward_network)
 
         # Feature scaling
         self.fc_features = fcgan_feature_scaling
@@ -178,7 +186,8 @@ class GANPlotter:
         num_images = 8
         train_x, train_y = next(iter(self.train_loader))
         val_x, val_y = next(iter(self.val_loader))
-        z = torch.normal(0, 1, size=(train_x.shape[0], ZDIM)).to(self.device)
+        train_z = torch.normal(0, 1, size=(train_x.shape[0], ZDIM)).to(self.device)
+        val_z = torch.normal(0, 1, size=(val_x.shape[0], ZDIM)).to(self.device)
 
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
@@ -192,8 +201,8 @@ class GANPlotter:
 
                 # Make predictions and plot channel 1
                 with torch.no_grad():
-                    pred_train_x = generator(z, train_y)
-                    pred_val_x = generator(z, val_y)
+                    pred_train_x = generator(train_z, train_y)
+                    pred_val_x = generator(val_z, val_y)
 
                 fig, axes = plt.subplots(4, num_images, figsize=(18, 10))
                 for im in range(num_images):
@@ -228,13 +237,20 @@ class GANPlotter:
                     type=types[j],
                     dropout_rate=cp[k]["dropout"],
                 )
-                fig = gan_single_prediction_plot(generator, self.forward_network, self.test_loader, lambda x: self.test_dataset.apply_inverse_target_transform(x), ZDIM)
-                
+                fig = gan_single_prediction_plot(
+                    generator,
+                    self.forward_network,
+                    self.test_loader,
+                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
+                    idx,
+                    ZDIM,
+                )
+
                 name = k + "_single_prediction.png"
                 path = Path(self.savefig_dir) / Path(name)
                 fig.savefig(path, format="png", dpi=150)
                 plt.close(fig)
-    
+
     def plot_prediction_comparison(self):
         six_indices = [110, 4, 301, 256, 155, 406]
         types = ["fc", "dc"]
@@ -247,7 +263,9 @@ class GANPlotter:
                     dropout_rate=cp[k]["dropout"],
                 )
                 generator_dict[k] = generator
-            fig = gan_prediction_comparison(generator_dict, self.test_loader, six_indices, ZDIM)
+            fig = gan_prediction_comparison(
+                generator_dict, self.test_loader, six_indices, ZDIM
+            )
 
             name = types[j] + "gan_prediction_comparison.png"
             path = Path(self.savefig_dir) / Path(name)
@@ -255,6 +273,26 @@ class GANPlotter:
             plt.close(fig)
 
     def plot_multiple_predictions(self):
+        indices = [
+            3,
+            215,
+            11,
+            31,
+            68,
+            90,
+            305,
+            94,
+            95,
+            97,
+            102,
+            112,
+            159,
+            188,
+            5,
+            222,
+            254,
+            85,
+        ]
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
             for k in cp.keys():
@@ -263,7 +301,15 @@ class GANPlotter:
                     type=types[j],
                     dropout_rate=cp[k]["dropout"],
                 )
-                fig = gan_big_prediction_plot(generator, self.forward_network, self.test_loader, lambda x: self.test_dataset.apply_inverse_target_transform(x), ZDIM, k)
+                fig = gan_big_prediction_plot(
+                    generator,
+                    self.forward_network,
+                    self.test_loader,
+                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
+                    indices,
+                    ZDIM,
+                    k,
+                )
 
                 name = k + "multiple_predictions.png"
                 path = Path(self.savefig_dir) / Path(name)
@@ -304,6 +350,26 @@ class GANPlotter:
             raise TypeError(f"Unknown model type: {type}")
         generator.load_state_dict(state_dict)
         return generator.to(self.device)
+
+    def _load_forward_network(self, forward_network_dict):
+        im_ch, im_size, _ = get_image_size(self.train_loader)
+        out_ch, ydim = get_label_size(self.train_loader)
+
+        fn_checkpoint = torch.load(
+            forward_network_dict["load_path"],
+            weights_only=False,
+        )
+        fn = forward_network_dict["model"]
+        forward_network = fn(
+            im_ch,
+            ydim,
+            activation=Softplus(),
+            image_size=im_size,
+            out_channels=out_ch,
+            dropout_rate=0.5,
+        ).to(self.device)
+        forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
+        return forward_network.to(self.device)
 
     def _generic_1d_plot(
         self,
