@@ -103,6 +103,7 @@ gan_plotter = GANPlotter(
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
 gan_plotter.plot_images()
+gan_plotter.plot_single_sample_prediction()
 
 
 ############# All structures #################
@@ -135,54 +136,30 @@ forward_network = {
 }
 
 fcgan_files = {
-    "FCGAN with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP + Em. no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
 }
 
 dcgan_files = {
-    "DCGAN with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN no dropout": (
+    "DCGAN": (
         "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP no dropout": (
+    "DCGAN + LP": (
         "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP + Em. no dropout": (
+    "DCGAN + LP + Em.": (
         "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),

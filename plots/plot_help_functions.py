@@ -1,121 +1,149 @@
+import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
 
 def gan_single_prediction_plot(
-    generator, forward_network, dataloader, inverse_target_transform, idx, z_dim
+    generator1,
+    generator2,
+    forward_network,
+    dataloader,
+    inverse_target_transform,
+    idx,
+    z_dim,
+    network_labels,
 ):
-    generator.eval()
+    generator1.eval()
+    generator2.eval()
     forward_network.eval()
 
     with torch.no_grad():
-        real, labels = next(iter(dataloader))
-        z = torch.normal(0, 1, size=(labels.shape[0], z_dim))
-        fake = generator(z, labels)
-        real_labels = forward_network(real)
-        fake_labels = forward_network(fake)
+        real, label = next(iter(dataloader))
+        real, label = (real[idx].unsqueeze(0), label[idx].unsqueeze(0))
 
-        # Inverse training set transform
-        labels = inverse_target_transform(labels)
-        real_labels = inverse_target_transform(real_labels)
-        fake_labels = inverse_target_transform(fake_labels)
+        z = torch.normal(0, 1, size=(label.shape[0], z_dim))
+        fake = generator1(z, label)
+        fake2 = generator2(z, label)
+        real_label = forward_network(real)
+        fake_label = forward_network(fake)
+        fake_label2 = forward_network(fake2)
+
+        # Inverse target transform to restore original data range
+        label = inverse_target_transform(label)
+        real_label = inverse_target_transform(real_label)
+        fake_label = inverse_target_transform(fake_label)
+        fake_label2 = inverse_target_transform(fake_label2)
 
         # Prepare for plotting
-        labels = labels.detach()
-        real_labels = real_labels.detach()
-        fake_labels = fake_labels.detach()
+        label = label.detach()
+        real_label = real_label.detach()
+        fake_label = fake_label.detach()
+        fake_label2 = fake_label2.detach()
         real = real.detach()
         fake = fake.detach()
+        fake2 = fake2.detach()
 
-        original_label = labels[idx]
-        real_label = real_labels[idx]
-        fake_label = fake_labels[idx]
-        y_dim = original_label.shape[-1]
+        original_label = label[0]
+        ydim = original_label.shape[-1]
+        ylim = 2.0 * original_label.max().item()
+        real_label = real_label[0]
+        fake_label = fake_label[0]
+        fake_label2 = fake_label2[0]
+        real = real[0]
+        fake = fake[0]
+        fake2 = fake2[0]
 
         # Custom figure and axes
-        fig = plt.figure(figsize=(21, 7))
-        ax0 = plt.subplot2grid(shape=(2, 6), loc=(0, 0))
-        ax1 = plt.subplot2grid(shape=(2, 6), loc=(0, 1))
-        ax2 = plt.subplot2grid(shape=(2, 6), loc=(1, 0))
-        ax3 = plt.subplot2grid(shape=(2, 6), loc=(1, 1))
-        ax4 = plt.subplot2grid(shape=(2, 6), loc=(0, 2), colspan=2, rowspan=2)
-        ax5 = plt.subplot2grid(shape=(2, 6), loc=(0, 4), colspan=2, rowspan=2)
-        ax = [[ax0, ax1], [ax2, ax3], [ax4, ax5]]
+        fig = plt.figure(figsize=(14, 10))
+        ax0 = plt.subplot2grid(shape=(5, 6), loc=(0, 0), colspan=2, rowspan=2)
+        ax1 = plt.subplot2grid(shape=(5, 6), loc=(0, 2), colspan=2, rowspan=2)
+        ax2 = plt.subplot2grid(shape=(5, 6), loc=(0, 4), colspan=2, rowspan=2)
+        ax3 = plt.subplot2grid(shape=(5, 6), loc=(2, 0), colspan=3, rowspan=3)
+        ax4 = plt.subplot2grid(
+            shape=(5, 6), loc=(2, 3), colspan=3, rowspan=3, sharey=ax3
+        )
+        ax = [ax0, ax1, ax2, ax3, ax4]
 
         # Colormap
         cmap = plt.get_cmap("inferno_r")
 
-        FS = 24
-        fs = 18
-        (
-            ax[0][0].imshow(-real[idx, 0, :, :], vmin=-1, vmax=1, cmap=cmap),
-            ax[0][0].set_title("Shape", fontsize=FS),
+        FS = 16
+        fs = 14
+        # Original image plot
+        ax0.imshow(real[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax0.set_title("Original", fontsize=FS, weight="bold")
+        # GAN-network 1 image plot
+        ax1.imshow(fake[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax1.set_title(network_labels[0], fontsize=FS, weight="bold")
+        # GAN-network 2 image plot
+        ax2.imshow(fake2[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax2.set_title(network_labels[1], fontsize=FS, weight="bold")
+        # Prediction plots, GAN-network 1
+        lda = np.linspace(400, 800, ydim)
+        ax3.plot(lda, original_label[0], label="FEM", linewidth=3, linestyle="solid")
+        ax3.plot(
+            lda,
+            fake_label[0],
+            label="Pred. " + network_labels[0],
+            linewidth=3,
+            linestyle="dashed",
         )
-        (
-            ax[0][1].imshow(real[idx, 1, :, :], vmin=-1, vmax=1, cmap=cmap),
-            ax[0][1].set_title("Topology", fontsize=FS),
+        ax3.plot(
+            lda,
+            fake_label2[0],
+            label="Pred. " + network_labels[1],
+            linewidth=3,
+            linestyle="dashed",
         )
-        ax[1][0].imshow(-fake[idx, 0, :, :], vmin=-1, vmax=1, cmap=cmap)
-        ax[1][1].imshow(fake[idx, 1, :, :], vmin=-1, vmax=1, cmap=cmap)
-        ax[0][0].set_ylabel("Original", fontsize=FS)
-        ax[1][0].set_ylabel("GAN", fontsize=FS)
-        lda = np.linspace(400, 800, y_dim)
-        ax[2][0].plot(
-            lda, original_label[0], label="FEM", linewidth=3, linestyle="solid"
-        )
-        ax[2][0].plot(
-            lda, fake_label[0], label="Pred. fake", linewidth=3, linestyle="dashed"
-        )
-        ax[2][0].plot(
+        ax3.plot(
             lda, real_label[0], label="Pred. real", linewidth=3, linestyle="dashdot"
         )
-        (
-            ax[2][0].set_ylabel("Sca. cross sec. [m^2]", fontsize=FS),
-            ax[2][0].legend(fontsize=fs),
+        ax3.set_xlabel("Wavelength [nm]", fontsize=FS)
+        ax3.set_ylabel("Sca. cross sec. [m^2]", fontsize=FS)
+        ax3.legend(fontsize=fs)
+        ax4.plot(lda, original_label[1], label="FEM", linewidth=3, linestyle="solid")
+        ax4.plot(
+            lda,
+            fake_label[1],
+            label="Pred. " + network_labels[0],
+            linewidth=3,
+            linestyle="dashed",
         )
-        ax[2][0].set_xlabel("Wavelength [nm]", fontsize=FS)
-        ax[2][1].plot(
-            lda, original_label[1], label="FEM", linewidth=3, linestyle="solid"
+        ax4.plot(
+            lda,
+            fake_label2[1],
+            label="Pred. " + network_labels[1],
+            linewidth=3,
+            linestyle="dashed",
         )
-        ax[2][1].plot(
-            lda, fake_label[1], label="Pred. fake", linewidth=3, linestyle="dashed"
-        )
-        ax[2][1].plot(
+        ax4.plot(
             lda, real_label[1], label="Pred. real", linewidth=3, linestyle="dashdot"
         )
-        (
-            ax[2][1].set_ylabel("Abs. cross sec. [m^2]", fontsize=FS),
-            ax[2][1].legend(fontsize=fs),
-        )
-        ax[2][1].set_xlabel("Wavelength [nm]", fontsize=FS)
-        for i in range(2):
-            ax[2][i].yaxis.get_offset_text().set_fontsize(fs)
-            ax[2][i].tick_params(axis="y", which="both", labelsize=fs)
-            ax[2][i].tick_params(axis="x", which="both", labelsize=fs)
-            ax[2][i].set_ylim([0, 5e-14])
-            ax[2][i].grid()
+        ax4.set_xlabel("Wavelength [nm]", fontsize=FS)
+        ax4.set_ylabel("Abs. cross sec. [m^2]", fontsize=FS)
+        ax4.legend(fontsize=fs)
 
-        annotations = [["a)", "b)"], ["c)", "d)"], ["e)", "f)"]]
+        # Adjust x-axis and y-axis
+        for j in range(3, 5):
+            ax[j].yaxis.get_offset_text().set_fontsize(fs)
+            ax[j].tick_params(axis="y", which="both", labelsize=fs)
+            ax[j].tick_params(axis="x", which="both", labelsize=fs)
+            ax[j].set_ylim(ylim)
+            ax[j].grid()
+
+        annotations = ["a)", "b)", "c)", "d)", "e)"]
+        for i in range(5):
+            ax[i].annotate(
+                annotations[i], xy=(0.1, 0.8), xycoords="axes fraction", fontsize=FS
+            )
+
+        # Adjust space between subplots
+        plt.subplots_adjust(hspace=0.2, wspace=0.65)
+
+        # Remove ticks on image plots
         for i in range(3):
-            for j in range(2):
-                ax[i][j].annotate(
-                    annotations[i][j],
-                    xy=(0.1, 0.8),
-                    xycoords="axes fraction",
-                    fontsize=24,
-                )
-
-        plt.subplots_adjust(hspace=0.03, wspace=0.33)
-        (
-            plt.setp(ax[0][0], xticks=[], yticks=[]),
-            plt.setp(ax[0][1], xticks=[], yticks=[]),
-        )
-        (
-            plt.setp(ax[1][0], xticks=[], yticks=[]),
-            plt.setp(ax[1][1], xticks=[], yticks=[]),
-        )
-
-    return fig
+            plt.setp(ax[i], xticks=[], yticks=[])
+        return fig
 
 
 def gan_prediction_comparison(generator_dict, dataloader, indices, z_dim):

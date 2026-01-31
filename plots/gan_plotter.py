@@ -148,7 +148,7 @@ class GANPlotter:
         # Adjust ylim
         for axes in ax.flatten():
             ymin, ymax = axes.get_ylim()
-            axes.set_ylim(ymin, ymax * 2.0)
+            axes.set_ylim(0.8 * ymin, ymax * 1.75)
 
         name = "validation_error_2x2_figure.png"
         path = Path(self.savefig_dir) / Path(name)
@@ -231,22 +231,32 @@ class GANPlotter:
         idx = 0
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
-            for k in cp.keys():
-                generator = self._load_generator(
-                    cp[k]["generator_state_dict"],
-                    type=types[j],
-                    dropout_rate=cp[k]["dropout"],
-                )
+            if len(cp) > 2:
+                generators = []
+                generator_labels = []
+                for i, k in enumerate(cp.keys()):
+                    generators.append(
+                        self._load_generator(
+                            cp[k]["generator_state_dict"],
+                            type=types[j],
+                            dropout_rate=cp[k]["dropout"],
+                        )
+                    )
+                    generator_labels.append(k)
+                    if i == 1:
+                        break
                 fig = gan_single_prediction_plot(
-                    generator,
+                    generators[0],
+                    generators[1],
                     self.forward_network,
                     self.test_loader,
                     lambda x: self.test_dataset.apply_inverse_target_transform(x),
                     idx,
                     ZDIM,
+                    generator_labels,
                 )
 
-                name = k + "_single_prediction.png"
+                name = types[j] + "gan_single_prediction.png"
                 path = Path(self.savefig_dir) / Path(name)
                 fig.savefig(path, format="png", dpi=150)
                 plt.close(fig)
