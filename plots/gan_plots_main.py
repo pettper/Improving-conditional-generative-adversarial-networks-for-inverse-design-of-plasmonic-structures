@@ -79,20 +79,33 @@ gan_plotter.plot_error_estimates()
 
 
 fcgan_files = {
-    "FCGAN + LP no dropout epoch 8701": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_best_epoch_8701.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=0_em=0_data=cyl_drop=0.0_feat=4_best_epoch_14901.pth.tar",
         0.0,
     ),
-    "FCGAN + LP no dropout epoch 16501": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.5_best_epoch_16501.pth.tar",
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.0_feat=4_best_epoch_2901.pth.tar",
         0.0,
     ),
-    "FCGAN + LP + Em. no dropout epoch 20000": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
+    "FCGAN + LP": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_feat=4_best_epoch_2901.pth.tar",
         0.0,
     ),
 }
-dcgan_files = {}
+dcgan_files = {
+    "DCGAN": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=0_em=0_data=cyl_drop=0.0_best_epoch_6701.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP + Em.": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=1_data=cyl_drop=0.0_best_epoch_4201.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=0_data=cyl_drop=0.0_best_epoch_5001.pth.tar",
+        0.0,
+    ),
+}
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
@@ -100,6 +113,7 @@ gan_plotter = GANPlotter(
     train_dataset,
     val_dataset,
     test_dataset,
+    fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
 gan_plotter.plot_images()

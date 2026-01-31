@@ -45,7 +45,7 @@ def gan_single_prediction_plot(
 
         original_label = label[0]
         ydim = original_label.shape[-1]
-        ylim = 2.0 * original_label.max().item()
+        ylim = 1.75 * original_label.max().item()
         real_label = real_label[0]
         fake_label = fake_label[0]
         fake_label2 = fake_label2[0]
@@ -128,7 +128,7 @@ def gan_single_prediction_plot(
             ax[j].yaxis.get_offset_text().set_fontsize(fs)
             ax[j].tick_params(axis="y", which="both", labelsize=fs)
             ax[j].tick_params(axis="x", which="both", labelsize=fs)
-            ax[j].set_ylim(ylim)
+            ax[j].set_ylim(0.0, ylim)
             ax[j].grid()
 
         annotations = ["a)", "b)", "c)", "d)", "e)"]
