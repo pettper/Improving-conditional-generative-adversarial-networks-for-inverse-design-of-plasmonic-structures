@@ -16,7 +16,7 @@ C, W, H = 2, 128, 128  # Channels, Pixels, Pixels
 
 class DimerDataset(Dataset):
 
-    def __init__(self, root_dir, variable, transform=None, target_transform=None, number_of_samples=None):
+    def __init__(self, root_dir, variable, transform=None, target_transform=None, inverse_transform=None, inverse_target_transform=None, number_of_samples=None):
         """
          root_dir: root_dir is the directory where the data files are stored. Each file in the root directory
          corresponds to exactly ONE sample.
@@ -24,12 +24,17 @@ class DimerDataset(Dataset):
          y_dim: Number of points in output_data/variable
          transform: Optional transform to the image data
          target_transform: Optional transform to the output data
+         inverse_transform: Optional inverse transform to the image data
+         inverse_target_transform: Optional inverse transform to the output data
+         number_of_samples: Optional to specify size of dataset. Then __len__ will return number_of_samples. 
         """
         # Expects 2 channels with 128x128
         self.root_dir = root_dir
         self.variable = variable
         self.transform = transform
+        self.inverse_transform = inverse_transform
         self.target_transform = target_transform
+        self.inverse_target_transform = inverse_target_transform
         self.number_of_samples=number_of_samples
 
         # Data variables to be returned
@@ -130,6 +135,13 @@ class DimerDataset(Dataset):
             image_data = self.default_transform(image_data)
         return image_data
 
+    def apply_inverse_transform(self, image_data):
+        if self.inverse_transform:
+            image_data = self.inverse_transform(image_data)
+        else:
+            image_data = self.default_inverse_transform(image_data)
+        return image_data
+
     def apply_target_transform(self, output_data):
         # Target transform
         if self.target_transform:
@@ -139,11 +151,23 @@ class DimerDataset(Dataset):
             output_data = self.default_target_transform(output_data)
         return output_data
 
+    def apply_inverse_target_transform(self, output_data):
+        if self.inverse_target_transform:
+            output_data = self.inverse_target_transform(output_data)
+        else:
+            output_data = self.default_inverse_target_transform(output_data)
+        return output_data
+
     def default_transform(self, image_data):
         image_data[:, 0, :, :] = (PIXEL_MIN + (image_data[:, 0, :, :] - self.shape_min)
                                   * (PIXEL_MAX - PIXEL_MIN) / (self.shape_max - self.shape_min))
         image_data[:, 1, :, :] = (PIXEL_MIN + (image_data[:, 1, :, :] - self.top_min)
                                   * (PIXEL_MAX - PIXEL_MIN) / (self.top_max - self.top_min))
+        return image_data
+
+    def default_inverse_transform(self, image_data):
+        image_data[:, 0, :, :] = (image_data[:, 0, :, :] - PIXEL_MIN) * (self.shape_max - self.shape_min) / (PIXEL_MAX - PIXEL_MIN) + self.shape_min
+        image_data[:, 1, :, :] = (image_data[:, 1, :, :] - PIXEL_MIN) * (self.top_max - self.top_min) / (PIXEL_MAX - PIXEL_MIN) + self.top_min
         return image_data
 
     def default_target_transform(self, output_data):
@@ -162,6 +186,26 @@ class DimerDataset(Dataset):
                 output_data = (output_data - self.rot_min) / (self.rot_max - self.rot_min)
             elif self.variable == DimerVariable.ELLIPTICITY:
                 output_data = (output_data - self.elip_min) / (self.elip_max - self.elip_min)
+        return output_data
+
+    def default_inverse_target_transform(self, output_data):
+        if data_variable == DimerVariable.ALL:
+            output_data[:, 0, :] = output_data[:, 0, :] * (self.sca_max - self.sca_min) + self.sca_min
+            output_data[:, 1, :] = output_data[:, 1, :] * (self.abs_max - self.abs_min) + self.abs_min
+            output_data[:, 2, :] = output_data[:, 2, :] * (self.rot_max - self.rot_min) + self.rot_min
+            output_data[:, 3, :] = output_data[:, 3, :] * (self.elip_max - self.elip_min) + self.elip_min
+        elif data_variable == DimerVariable.CROSS_SECTIONS:
+            output_data[:, 0, :] = output_data[:, 0, :] * (self.sca_max - self.sca_min) + self.sca_min
+            output_data[:, 1, :] = output_data[:, 1, :] * (self.abs_max - self.abs_min) + self.abs_min
+        else:
+            if data_variable == DimerVariable.SCATTERING_CROSS_SECTION:
+                output_data = output_data * (self.sca_max - self.sca_min) + self.sca_min
+            elif data_variable == DimerVariable.ABSORPTION_CROSS_SECTION:
+                output_data = output_data * (self.abs_max - self.abs_min) + self.abs_min
+            elif data_variable == DimerVariable.ROTATION:
+                output_data = output_data * (self.rot_max - self.rot_min) + self.rot_min
+            elif data_variable == DimerVariable.ELLIPTICITY:
+                output_data = output_data * (self.elip_max - self.elip_min) + self.elip_min
         return output_data
 
     def validation_split(self, val_ratio=0.2):
