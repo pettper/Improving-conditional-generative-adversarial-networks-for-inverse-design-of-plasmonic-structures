@@ -3,10 +3,11 @@ from pathlib import Path
 import torch
 from cycler import cycler
 from matplotlib import pyplot as plt
-
+from torch.utils.data import DataLoader, RandomSampler
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
 from src.utils import get_image_size, get_label_size, moving_average
+from plots.plot_help_functions import gan_single_prediction_plot, gan_prediction_comparison, gan_big_prediction_plot
 
 torch.manual_seed(23)
 
@@ -26,8 +27,10 @@ class GANPlotter:
         self,
         fcgan_checkpoints_dict,
         dcgan_checkpoints_dict,
-        train_loader=None,
-        val_loader=None,
+        forward_network,
+        train_dataset=None,
+        val_dataset=None,
+        test_dataset=None,
         fcgan_feature_scaling=1,
         dcgan_feature_scaling=1,
         device="cpu",
@@ -38,21 +41,26 @@ class GANPlotter:
         INPUTS:
             fcgan_checkpoints_dict: A dictionary of 2-tuples, (checkpoint_filename, dropout). The keys will be treated as plot labels.
             dcgan_checkpoints_dict: A dictionary of 2-tuples, (checkpoint_filename, dropout). The keys will be treated as plot labels.
-            train_loader: dataloader for the training dataset.
-            val_loader: dataloader for the validation dataset.
+            train_dataset: Training dataset, an instance of DimerDataset.
+            val_dataset: Validation dataset, an instance of DimerDataset.
             device: Torch device to use, defaults to "cpu".
             savefig_dir: Directory to save all figures in.
         """
         self.device = device
         self.savefig_dir = savefig_dir
+        self.forward_network = forward_network
 
         # Load checkpoints and dropout rates
         self.fcgan_checkpoints = self._load_checkpoints(fcgan_checkpoints_dict)
         self.dcgan_checkpoints = self._load_checkpoints(dcgan_checkpoints_dict)
 
-        # Data loaders
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        # Dataset and data loaders
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.test_dataset = test_dataset
+        self.train_loader = GANPlotter._setup_data_loader(self.train_dataset)
+        self.val_loader = GANPlotter._setup_data_loader(self.val_dataset)
+        self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
 
         # Feature scaling
         self.fc_features = fcgan_feature_scaling
@@ -210,6 +218,58 @@ class GANPlotter:
                 fig.savefig(path, format="png", dpi=150)
                 plt.close(fig)
 
+    def plot_single_sample_prediction(self):
+        idx = 0
+        types = ["fc", "dc"]
+        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
+            for k in cp.keys():
+                generator = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type=types[j],
+                    dropout_rate=cp[k]["dropout"],
+                )
+                fig = gan_single_prediction_plot(generator, self.forward_network, self.test_loader, lambda x: self.test_dataset.apply_inverse_target_transform(x), ZDIM)
+                
+                name = k + "_single_prediction.png"
+                path = Path(self.savefig_dir) / Path(name)
+                fig.savefig(path, format="png", dpi=150)
+                plt.close(fig)
+    
+    def plot_prediction_comparison(self):
+        six_indices = [110, 4, 301, 256, 155, 406]
+        types = ["fc", "dc"]
+        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
+            generator_dict = {}
+            for k in cp.keys():
+                generator = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type=types[j],
+                    dropout_rate=cp[k]["dropout"],
+                )
+                generator_dict[k] = generator
+            fig = gan_prediction_comparison(generator_dict, self.test_loader, six_indices, ZDIM)
+
+            name = types[j] + "gan_prediction_comparison.png"
+            path = Path(self.savefig_dir) / Path(name)
+            fig.savefig(path, format="png", dpi=150)
+            plt.close(fig)
+
+    def plot_multiple_predictions(self):
+        types = ["fc", "dc"]
+        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
+            for k in cp.keys():
+                generator = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type=types[j],
+                    dropout_rate=cp[k]["dropout"],
+                )
+                fig = gan_big_prediction_plot(generator, self.forward_network, self.test_loader, lambda x: self.test_dataset.apply_inverse_target_transform(x), ZDIM, k)
+
+                name = k + "multiple_predictions.png"
+                path = Path(self.savefig_dir) / Path(name)
+                fig.savefig(path, format="png", dpi=150)
+                plt.close(fig)
+
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}
         for k in checkpoints_dict.keys():
@@ -356,3 +416,15 @@ class GANPlotter:
         im = ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
         ax.axis("off")
         return im
+
+    @staticmethod
+    def _setup_data_loader(dataset):
+        loader = None
+        if dataset:
+            loader = train_loader = DataLoader(
+                dataset,
+                batch_size=3000,
+                sampler=RandomSampler(dataset),
+                pin_memory=True,
+            )
+        return loader

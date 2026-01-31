@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from torch.utils.data import DataLoader, RandomSampler
-
 from plots import GANPlotter
 from src.utils import DimerDataset as Dataset
 from src.utils import DimerVariable
+from src.cnn_regression import EfficientNetV2RegressionGeneral as ForwardNet
 
 #################### Dimer cylinders ###################
 root_dir = Path("./data/dimer_cylinder_train_val_test")
@@ -18,19 +17,28 @@ val_dataset = Dataset(
     DimerVariable.CROSS_SECTIONS,
     transform=lambda x: train_dataset.apply_transform(x),
     target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x)
 )
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=16,
-    sampler=RandomSampler(train_dataset),
-    pin_memory=True,
+test_dataset = Dataset(
+    test_dir,  # Validation set uses same transforms as in the training set
+    DimerVariable.CROSS_SECTIONS,
+    transform=lambda x: train_dataset.apply_transform(x),
+    target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x)
 )
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    sampler=RandomSampler(val_dataset),
-    pin_memory=True,
-)
+
+fn_checkpoint = torch.load("delivery/pretrained_cnn_models/last_epoch_effv2_cross_dimer_cylinders_lr00001_drop05.pth.tar", weights_only=False)
+forward_network = EfficientNetV2RegressionGeneral(
+                            im_channels,
+                            ydim,
+                            activation=Softplus(),
+                            image_size=image_size,
+                            out_channels=target_channels,
+                            dropout_rate=0.5,
+                        ).to(self.device)
+forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
 
 fcgan_files = {
     "FCGAN": (
@@ -65,6 +73,7 @@ dcgan_files = {
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
+    forward_network,
     fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
@@ -90,8 +99,9 @@ dcgan_files = {}
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
-    train_loader=train_loader,
-    val_loader=val_loader,
+    forward_network,
+    train_dataset=train_dataset,
+    val_dataset=val_dataset
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
 gan_plotter.plot_images()
@@ -109,19 +119,20 @@ val_dataset = Dataset(
     DimerVariable.CROSS_SECTIONS,
     transform=lambda x: train_dataset.apply_transform(x),
     target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x)
 )
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=16,
-    sampler=RandomSampler(train_dataset),
-    pin_memory=True,
-)
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    sampler=RandomSampler(val_dataset),
-    pin_memory=True,
-)
+
+fn_checkpoint = torch.load("delivery/pretrained_cnn_models/last_epoch_effv2_cross_all_structures_lr00001_drop05.pth.tar", weights_only=False)
+forward_network = EfficientNetV2RegressionGeneral(
+                            im_channels,
+                            ydim,
+                            activation=Softplus(),
+                            image_size=image_size,
+                            out_channels=target_channels,
+                            dropout_rate=0.5,
+                        ).to(self.device)
+forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
 
 fcgan_files = {
     "FCGAN with dropout": (
@@ -178,7 +189,7 @@ dcgan_files = {
 }
 
 gan_plotter = GANPlotter(
-    fcgan_files, dcgan_files, savefig_dir="./figures/aip_review_changes/all_structures/"
+    fcgan_files, dcgan_files, forward_network, savefig_dir="./figures/aip_review_changes/all_structures/"
 )
 gan_plotter.plot()
 
@@ -197,8 +208,9 @@ dcgan_files = {
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
-    train_loader=train_loader,
-    val_loader=val_loader,
+    forward_network,
+    train_dataset=train_dataset,
+    val_dataset=val_dataset
     savefig_dir="./figures/aip_review_changes/all_structures/",
 )
 gan_plotter.plot_images()
