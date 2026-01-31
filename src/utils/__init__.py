@@ -22,6 +22,7 @@ from .help_functions import (
     initialize_dcgan_weights,
     load_pretrained_h2y,
     load_yaml,
+    moving_average,
     print_gan_losses,
     print_losses,
     print_losses_and_time,

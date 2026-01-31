@@ -1,16 +1,24 @@
 from pathlib import Path
 
 import torch
+from cycler import cycler
 from matplotlib import pyplot as plt
 
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
-from src.utils import get_image_size, get_label_size
+from src.utils import get_image_size, get_label_size, moving_average
 
 torch.manual_seed(23)
 
 ZDIM = 100
-FEATURE_SCALING = 1
+SMA_WINDOW_SIZE = 3
+
+colors = ["#003049", "#D62828", "#F77F00", "#FCBF49", "#EAE2B7", "#588157"]
+markers = ["o", "s", "^", "D", "v", "p"]
+plt.rcParams["axes.prop_cycle"] = cycler(color=colors) + cycler(marker=markers)
+plt.rcParams["lines.markersize"] = 3  # Smaller, more subtle markers
+plt.rcParams["lines.markerfacecolor"] = "none"
+plt.rcParams["lines.markeredgewidth"] = 0.5  # Keeps the marker border thin
 
 
 class GANPlotter:
@@ -20,6 +28,8 @@ class GANPlotter:
         dcgan_checkpoints_dict,
         train_loader=None,
         val_loader=None,
+        fcgan_feature_scaling=1,
+        dcgan_feature_scaling=1,
         device="cpu",
         savefig_dir="./",
     ):
@@ -44,6 +54,10 @@ class GANPlotter:
         self.train_loader = train_loader
         self.val_loader = val_loader
 
+        # Feature scaling
+        self.fc_features = fcgan_feature_scaling
+        self.dc_features = dcgan_feature_scaling
+
     def plot(self):
         self.plot_error_estimates()
         self.plot_training_and_validation_error()
@@ -62,7 +76,9 @@ class GANPlotter:
                 val_err,
                 ylabel=r"$\mathrm{MAE}_{image}$",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Upper right, DCGAN validation image MAE
@@ -71,7 +87,13 @@ class GANPlotter:
             epochs = err[:, 0]
             val_err = err[:, 3]
             self._generic_1d_plot(
-                ax[0, 1], epochs, val_err, label=k, legend_fontsize="xx-small"
+                ax[0, 1],
+                epochs,
+                val_err,
+                label=k,
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Lower left, FCGAN spectral MAE
@@ -86,7 +108,9 @@ class GANPlotter:
                 xlabel="Epoch",
                 ylabel=r"$\mathrm{MAE}_{spectra}$",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Lower right, DCGAN spectral MAE
@@ -100,13 +124,15 @@ class GANPlotter:
                 val_cnn_err,
                 xlabel="Epoch",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Adjust ylim
         for axes in ax.flatten():
             ymin, ymax = axes.get_ylim()
-            axes.set_ylim(ymin, ymax * 3.0)
+            axes.set_ylim(ymin, ymax * 2.0)
 
         name = "validation_error_2x2_figure.png"
         path = Path(self.savefig_dir) / Path(name)
@@ -174,6 +200,11 @@ class GANPlotter:
 
                 plt.subplots_adjust(right=0.9)
 
+                axes[0, 0].set_ylabel("Traning data")
+                axes[1, 0].set_ylabel("Train. prediction")
+                axes[2, 0].set_ylabel("Validation data")
+                axes[3, 0].set_ylabel("Val. prediction")
+
                 name = k + "_train_val_pred_images_4x8.png"
                 path = Path(self.savefig_dir) / Path(name)
                 fig.savefig(path, format="png", dpi=150)
@@ -198,7 +229,7 @@ class GANPlotter:
                 y_dim=ydim,
                 image_size=im_size,
                 dropout_rate=dropout_rate,
-                features=FEATURE_SCALING,
+                features=self.dc_features,
             )
         elif type == "fc":
             generator = FCGANGenerator(
@@ -207,7 +238,7 @@ class GANPlotter:
                 y_dim=ydim,
                 image_size=im_size,
                 dropout_rate=dropout_rate,
-                features=FEATURE_SCALING,
+                features=self.fc_features,
             )
         else:
             raise TypeError(f"Unknown model type: {type}")
@@ -227,6 +258,9 @@ class GANPlotter:
         grid_on=True,
         legend_fontsize=10,
         legend_loc="upper right",
+        apply_sma_smoothing=False,
+        linewidth=1,
+        markevery=1,
     ):
         """
         1-dimensional plotting using matplotlib.
@@ -245,7 +279,10 @@ class GANPlotter:
         else:
             plot_fn = axes.plot
 
-        plot_fn(xdata, ydata, label=label)
+        if apply_sma_smoothing:
+            ydata = moving_average(ydata, SMA_WINDOW_SIZE)
+
+        plot_fn(xdata, ydata, label=label, linewidth=linewidth, markevery=markevery)
         axes.set_xlabel(xlabel)
         axes.set_ylabel(ylabel)
         if legend:
@@ -285,6 +322,9 @@ class GANPlotter:
                 grid_on=grid_on,
                 legend_fontsize=legend_fontsize,
                 legend_loc=legend_loc,
+                apply_sma_smoothing=True,
+                markevery=3,
+                linewidth=1,
             )
 
         # Plot forward error
@@ -303,6 +343,9 @@ class GANPlotter:
                 grid_on=grid_on,
                 legend_fontsize=legend_fontsize,
                 legend_loc=legend_loc,
+                apply_sma_smoothing=True,
+                markevery=3,
+                linewidth=1,
             )
 
         return fig
