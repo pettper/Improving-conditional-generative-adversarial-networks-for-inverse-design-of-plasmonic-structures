@@ -19,6 +19,7 @@ torch.manual_seed(23)
 
 ZDIM = 100
 SMA_WINDOW_SIZE = 3
+DPI = 250
 
 colors = ["#003049", "#D62828", "#F77F00", "#FCBF49", "#EAE2B7", "#588157"]
 markers = ["o", "s", "^", "D", "v", "p"]
@@ -63,8 +64,12 @@ class GANPlotter:
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
-        self.train_loader = GANPlotter._setup_data_loader(self.train_dataset)
-        self.val_loader = GANPlotter._setup_data_loader(self.val_dataset)
+        self.train_loader = GANPlotter._setup_data_loader(
+            self.train_dataset, RandomSampler(self.train_dataset)
+        )
+        self.val_loader = GANPlotter._setup_data_loader(
+            self.val_dataset, RandomSampler(self.val_dataset)
+        )
         self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
 
         # Forward network is used for evaluation
@@ -152,7 +157,7 @@ class GANPlotter:
 
         name = "validation_error_2x2_figure.png"
         path = Path(self.savefig_dir) / Path(name)
-        fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+        fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
         plt.close(fig)
 
     def plot_training_and_validation_error(self):
@@ -166,7 +171,7 @@ class GANPlotter:
             )
             name = k + "_train_val_error.png"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+            fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
         for k in self.dcgan_checkpoints.keys():
@@ -179,7 +184,7 @@ class GANPlotter:
             )
             name = k + "_train_val_error.png"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+            fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
     def plot_images(self):
@@ -224,27 +229,35 @@ class GANPlotter:
 
                 name = k + "_train_val_pred_images_4x8.png"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=150)
+                fig.savefig(path, format="png", dpi=DPI)
                 plt.close(fig)
 
-    def plot_single_sample_prediction(self):
-        idx = 0
-        types = ["fc", "dc"]
-        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
-            if len(cp) > 2:
+    def plot_single_sample_prediction(self, fcgan_keys=None, dcgan_keys=None):
+        """
+        Expects at least one of fcgan_keys or dcgan_keys to be a 2-tuple of keys to use in plot.
+        """
+        idx = 38
+        configs = (
+            ("fc", fcgan_keys, self.fcgan_checkpoints),
+            ("dc", dcgan_keys, self.dcgan_checkpoints),
+        )
+
+        for type, keys, checkpoints in configs:
+            if keys:
+                assert len(keys) == 2
+
                 generators = []
                 generator_labels = []
-                for i, k in enumerate(cp.keys()):
+                for k in keys:
                     generators.append(
                         self._load_generator(
-                            cp[k]["generator_state_dict"],
-                            type=types[j],
-                            dropout_rate=cp[k]["dropout"],
+                            checkpoints[k]["generator_state_dict"],
+                            type=type,
+                            dropout_rate=checkpoints[k]["dropout"],
                         )
                     )
                     generator_labels.append(k)
-                    if i == 1:
-                        break
+
                 fig = gan_single_prediction_plot(
                     generators[0],
                     generators[1],
@@ -256,14 +269,15 @@ class GANPlotter:
                     generator_labels,
                 )
 
-                name = types[j] + "gan_single_prediction.png"
+                name = type + "gan_single_prediction.png"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=150)
+                fig.savefig(path, format="png", dpi=DPI)
                 plt.close(fig)
 
-    def plot_prediction_comparison(self):
+    def plot_prediction_comparison(self, fcgan_labels=None, dcgan_labels=None):
         six_indices = [110, 4, 301, 256, 155, 406]
         types = ["fc", "dc"]
+        network_labels = [fcgan_labels, dcgan_labels]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
             generator_dict = {}
             for k in cp.keys():
@@ -274,35 +288,20 @@ class GANPlotter:
                 )
                 generator_dict[k] = generator
             fig = gan_prediction_comparison(
-                generator_dict, self.test_loader, six_indices, ZDIM
+                generator_dict,
+                self.test_loader,
+                six_indices,
+                ZDIM,
+                generator_labels=network_labels[j],
             )
 
             name = types[j] + "gan_prediction_comparison.png"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=150)
+            fig.savefig(path, format="png", dpi=DPI)
             plt.close(fig)
 
     def plot_multiple_predictions(self):
-        indices = [
-            3,
-            215,
-            11,
-            31,
-            68,
-            90,
-            305,
-            94,
-            95,
-            97,
-            102,
-            112,
-            159,
-            188,
-            5,
-            222,
-            254,
-            85,
-        ]
+        indices = [33, 121, 82, 254, 300, 44, 278, 399, 166, 431]
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
             for k in cp.keys():
@@ -321,9 +320,9 @@ class GANPlotter:
                     k,
                 )
 
-                name = k + "multiple_predictions.png"
+                name = k + "_multiple_predictions.png"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=150)
+                fig.savefig(path, format="png", dpi=DPI)
                 plt.close(fig)
 
     def _load_checkpoints(self, checkpoints_dict):
@@ -494,13 +493,13 @@ class GANPlotter:
         return im
 
     @staticmethod
-    def _setup_data_loader(dataset):
+    def _setup_data_loader(dataset, sampler=None):
         loader = None
         if dataset:
-            loader = train_loader = DataLoader(
+            loader = DataLoader(
                 dataset,
                 batch_size=3000,
-                sampler=RandomSampler(dataset),
+                sampler=sampler,
                 pin_memory=True,
             )
         return loader

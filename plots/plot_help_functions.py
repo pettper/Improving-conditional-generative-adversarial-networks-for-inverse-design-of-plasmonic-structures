@@ -54,7 +54,7 @@ def gan_single_prediction_plot(
         fake2 = fake2[0]
 
         # Custom figure and axes
-        fig = plt.figure(figsize=(14, 10))
+        fig = plt.figure(figsize=(16, 10))
         ax0 = plt.subplot2grid(shape=(5, 6), loc=(0, 0), colspan=2, rowspan=2)
         ax1 = plt.subplot2grid(shape=(5, 6), loc=(0, 2), colspan=2, rowspan=2)
         ax2 = plt.subplot2grid(shape=(5, 6), loc=(0, 4), colspan=2, rowspan=2)
@@ -70,7 +70,7 @@ def gan_single_prediction_plot(
         FS = 16
         fs = 14
         # Original image plot
-        ax0.imshow(real[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        im_plot = ax0.imshow(real[1, :, :], vmin=-1, vmax=1, cmap=cmap)
         ax0.set_title("Original", fontsize=FS, weight="bold")
         # GAN-network 1 image plot
         ax1.imshow(fake[1, :, :], vmin=-1, vmax=1, cmap=cmap)
@@ -137,6 +137,10 @@ def gan_single_prediction_plot(
                 annotations[i], xy=(0.1, 0.8), xycoords="axes fraction", fontsize=FS
             )
 
+        cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
+        cb = fig.colorbar(im_plot, cax=cb_ax)
+        cb.ax.tick_params(labelsize=FS)
+
         # Adjust space between subplots
         plt.subplots_adjust(hspace=0.2, wspace=0.65)
 
@@ -146,7 +150,9 @@ def gan_single_prediction_plot(
         return fig
 
 
-def gan_prediction_comparison(generator_dict, dataloader, indices, z_dim):
+def gan_prediction_comparison(
+    generator_dict, dataloader, indices, z_dim, generator_labels=None
+):
     num_images = 6
     assert len(indices) == num_images
     number_of_generators = len(generator_dict.keys())
@@ -194,8 +200,12 @@ def gan_prediction_comparison(generator_dict, dataloader, indices, z_dim):
                 )  # To remove the ticks from all images
 
         # Adds network labels
+        if generator_labels:
+            network_labels = generator_labels
+        else:
+            network_labels = generator_dict.keys()
         ax[0][0].set_ylabel("Original", fontsize=FS, weight="bold")
-        for j, k in enumerate(generator_dict.keys()):
+        for j, k in enumerate(network_labels):
             ax[j + 1][0].set_ylabel(k, fontsize=FS, weight="bold")
 
         # Adds a colorbar
@@ -229,9 +239,9 @@ def gan_big_prediction_plot(
         fake_labels = forward_network(fake)
 
         # Apply inverse transform to the labels to retain original data range
-        _, label = inverse_target_transform(label)
-        _, real_labels = inverse_target_transform(real_labels)
-        _, fake_labels = inverse_target_transform(fake_labels)
+        label = inverse_target_transform(label)
+        real_labels = inverse_target_transform(real_labels)
+        fake_labels = inverse_target_transform(fake_labels)
 
         # Prepare for plotting
         original_labels = label.detach()
@@ -244,7 +254,7 @@ def gan_big_prediction_plot(
         # 6x5 subplot
         rows = 6
         cols = 5
-        fig, ax = plt.subplots(6, cols, figsize=(12, 10))
+        fig, ax = plt.subplots(6, cols, figsize=(13, 10))
 
         # Colormap
         cmap = plt.get_cmap("inferno_r")
@@ -274,6 +284,7 @@ def gan_big_prediction_plot(
                     label="FEM",
                     linewidth=lw,
                     linestyle="solid",
+                    marker="",
                 )
                 ax[(rows // 3) + i][j].plot(
                     lda,
@@ -281,6 +292,7 @@ def gan_big_prediction_plot(
                     label="Pred. real",
                     linewidth=lw,
                     linestyle="dashdot",
+                    marker="",
                 )
                 ax[(rows // 3) + i][j].plot(
                     lda,
@@ -288,6 +300,7 @@ def gan_big_prediction_plot(
                     label="Pred. " + network_label,
                     linewidth=lw,
                     linestyle="dashed",
+                    marker="",
                 )
                 # Absorption cross-section
                 (line1,) = ax[2 * (rows // 3) + i][j].plot(
@@ -296,6 +309,7 @@ def gan_big_prediction_plot(
                     label="FEM",
                     linewidth=lw,
                     linestyle="solid",
+                    marker="",
                 )
                 (line2,) = ax[2 * (rows // 3) + i][j].plot(
                     lda,
@@ -303,6 +317,7 @@ def gan_big_prediction_plot(
                     label="Pred. real",
                     linewidth=lw,
                     linestyle="dashdot",
+                    marker="",
                 )
                 (line3,) = ax[2 * (rows // 3) + i][j].plot(
                     lda,
@@ -310,6 +325,7 @@ def gan_big_prediction_plot(
                     label="Pred. " + network_label,
                     linewidth=lw,
                     linestyle="dashed",
+                    marker="",
                 )
                 plt.figlegend(
                     handles=[line1, line2, line3],
@@ -353,7 +369,7 @@ def gan_big_prediction_plot(
         # Set axes limits and grid to true for cross section plots
         for i in range(rows // 3, rows):
             for j in range(cols):
-                ax[i][j].set_ylim(0, 5.3e-14)
+                ax[i][j].set_ylim(0, 6.0e-14)
                 ax[i][j].grid(True)
                 ax[i][j].set_xticks([400, 500, 600, 700, 800])
 
@@ -365,14 +381,14 @@ def gan_big_prediction_plot(
         plt.subplots_adjust(wspace=0.2, hspace=0.3)
         plt.annotate(
             "Sca. cross sec. [m^2]",
-            (0.05, 0.365),
+            (0.08, 0.385),
             xycoords="figure fraction",
             fontsize=FS + 6,
             rotation=90,
         )
         plt.annotate(
             "Abs. cross sec. [m^2]",
-            (0.05, 0.1),
+            (0.08, 0.12),
             xycoords="figure fraction",
             fontsize=FS + 6,
             rotation=90,
@@ -385,7 +401,7 @@ def gan_big_prediction_plot(
         )
         plt.annotate(
             "Original | " + network_label,
-            (0.30, 0.86),
+            (0.35, 0.90),
             xycoords="figure fraction",
             fontsize=FS + 8,
             weight="bold",
