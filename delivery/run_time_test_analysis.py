@@ -343,8 +343,11 @@ dcgan_lp_em = [1.2750, 1.0301, 1.1547, 1.1440, 1.1216, 1.1767, 1.1669, 1.1232, 1
 import math
 import statistics
 
+N_SAMPLES = 507
+
 def calculate_statistics(data):
 
+    data = [x / N_SAMPLES for x in data]
     n = len(data)
     mean = statistics.mean(data)
     stdev = statistics.stdev(data)
@@ -356,6 +359,6 @@ networks = ["FCGAN", "FCGAN + LP", "FCGAN + LP + Em.", "DCGAN", "DCGAN + LP", "D
 for s, data in enumerate([fcgan, fcgan_lp, fcgan_lp_em, dcgan, dcgan_lp, dcgan_lp_em]):
 
     mean, error = calculate_statistics(data)
-    print(f"{networks[s]:<20}: {mean:.4f} +- {error:.4f} seconds per epoch")
+    print(f"{s:<25}: {(mean*1000):>8.4f}({(error*1000):<.4f}) ms per epoch")
 
 
