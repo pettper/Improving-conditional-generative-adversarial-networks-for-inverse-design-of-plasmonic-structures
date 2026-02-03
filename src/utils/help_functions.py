@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+import numpy as np
 import torch
 import yaml
 from torch import autograd, nn
@@ -411,3 +412,14 @@ def get_label_size(data_loader):
     else:
         c = label.size(-2)
     return c, n  # channels, number of elements
+
+
+def moving_average(data, window_size):
+    """
+    Computes the moving average of a one dimensional array.
+    Handles start/end by taking the average of fewer elements than window size.
+    """
+    window = np.ones(window_size)
+    sums = np.convolve(data, window, mode="same")
+    counts = np.convolve(np.ones_like(data), window, mode="same")
+    return sums / counts

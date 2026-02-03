@@ -1,16 +1,32 @@
 from pathlib import Path
 
 import torch
+from cycler import cycler
 from matplotlib import pyplot as plt
+from torch.nn import Softplus
+from torch.utils.data import DataLoader, RandomSampler
 
+from plots.plot_help_functions import (
+    gan_big_prediction_plot,
+    gan_prediction_comparison,
+    gan_single_prediction_plot,
+)
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
-from src.utils import get_image_size, get_label_size
+from src.utils import get_image_size, get_label_size, moving_average
 
 torch.manual_seed(23)
 
 ZDIM = 100
-FEATURE_SCALING = 1
+SMA_WINDOW_SIZE = 3
+DPI = 250
+
+colors = ["#003049", "#D62828", "#F77F00", "#FCBF49", "#EAE2B7", "#588157"]
+markers = ["o", "s", "^", "D", "v", "p"]
+plt.rcParams["axes.prop_cycle"] = cycler(color=colors) + cycler(marker=markers)
+plt.rcParams["lines.markersize"] = 3  # Smaller, more subtle markers
+plt.rcParams["lines.markerfacecolor"] = "none"
+plt.rcParams["lines.markeredgewidth"] = 0.5  # Keeps the marker border thin
 
 
 class GANPlotter:
@@ -18,8 +34,12 @@ class GANPlotter:
         self,
         fcgan_checkpoints_dict,
         dcgan_checkpoints_dict,
-        train_loader=None,
-        val_loader=None,
+        forward_network,
+        train_dataset,
+        val_dataset,
+        test_dataset,
+        fcgan_feature_scaling=1,
+        dcgan_feature_scaling=1,
         device="cpu",
         savefig_dir="./",
     ):
@@ -28,8 +48,8 @@ class GANPlotter:
         INPUTS:
             fcgan_checkpoints_dict: A dictionary of 2-tuples, (checkpoint_filename, dropout). The keys will be treated as plot labels.
             dcgan_checkpoints_dict: A dictionary of 2-tuples, (checkpoint_filename, dropout). The keys will be treated as plot labels.
-            train_loader: dataloader for the training dataset.
-            val_loader: dataloader for the validation dataset.
+            train_dataset: Training dataset, an instance of DimerDataset.
+            val_dataset: Validation dataset, an instance of DimerDataset.
             device: Torch device to use, defaults to "cpu".
             savefig_dir: Directory to save all figures in.
         """
@@ -40,9 +60,24 @@ class GANPlotter:
         self.fcgan_checkpoints = self._load_checkpoints(fcgan_checkpoints_dict)
         self.dcgan_checkpoints = self._load_checkpoints(dcgan_checkpoints_dict)
 
-        # Data loaders
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        # Dataset and data loaders
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.test_dataset = test_dataset
+        self.train_loader = GANPlotter._setup_data_loader(
+            self.train_dataset, RandomSampler(self.train_dataset)
+        )
+        self.val_loader = GANPlotter._setup_data_loader(
+            self.val_dataset, RandomSampler(self.val_dataset)
+        )
+        self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
+
+        # Forward network is used for evaluation
+        self.forward_network = self._load_forward_network(forward_network)
+
+        # Feature scaling
+        self.fc_features = fcgan_feature_scaling
+        self.dc_features = dcgan_feature_scaling
 
     def plot(self):
         self.plot_error_estimates()
@@ -62,7 +97,9 @@ class GANPlotter:
                 val_err,
                 ylabel=r"$\mathrm{MAE}_{image}$",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Upper right, DCGAN validation image MAE
@@ -71,7 +108,13 @@ class GANPlotter:
             epochs = err[:, 0]
             val_err = err[:, 3]
             self._generic_1d_plot(
-                ax[0, 1], epochs, val_err, label=k, legend_fontsize="xx-small"
+                ax[0, 1],
+                epochs,
+                val_err,
+                label=k,
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Lower left, FCGAN spectral MAE
@@ -86,7 +129,9 @@ class GANPlotter:
                 xlabel="Epoch",
                 ylabel=r"$\mathrm{MAE}_{spectra}$",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Lower right, DCGAN spectral MAE
@@ -100,17 +145,19 @@ class GANPlotter:
                 val_cnn_err,
                 xlabel="Epoch",
                 label=k,
-                legend_fontsize="xx-small",
+                legend_fontsize="x-small",
+                apply_sma_smoothing=True,
+                markevery=3,
             )
 
         # Adjust ylim
         for axes in ax.flatten():
             ymin, ymax = axes.get_ylim()
-            axes.set_ylim(ymin, ymax * 3.0)
+            axes.set_ylim(0.8 * ymin, ymax * 1.75)
 
         name = "validation_error_2x2_figure.png"
         path = Path(self.savefig_dir) / Path(name)
-        fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+        fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
         plt.close(fig)
 
     def plot_training_and_validation_error(self):
@@ -124,7 +171,7 @@ class GANPlotter:
             )
             name = k + "_train_val_error.png"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+            fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
         for k in self.dcgan_checkpoints.keys():
@@ -137,14 +184,15 @@ class GANPlotter:
             )
             name = k + "_train_val_error.png"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=150, bbox_inches="tight")
+            fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
     def plot_images(self):
         num_images = 8
         train_x, train_y = next(iter(self.train_loader))
         val_x, val_y = next(iter(self.val_loader))
-        z = torch.normal(0, 1, size=(train_x.shape[0], ZDIM)).to(self.device)
+        train_z = torch.normal(0, 1, size=(train_x.shape[0], ZDIM)).to(self.device)
+        val_z = torch.normal(0, 1, size=(val_x.shape[0], ZDIM)).to(self.device)
 
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
@@ -158,8 +206,8 @@ class GANPlotter:
 
                 # Make predictions and plot channel 1
                 with torch.no_grad():
-                    pred_train_x = generator(z, train_y)
-                    pred_val_x = generator(z, val_y)
+                    pred_train_x = generator(train_z, train_y)
+                    pred_val_x = generator(val_z, val_y)
 
                 fig, axes = plt.subplots(4, num_images, figsize=(18, 10))
                 for im in range(num_images):
@@ -174,9 +222,107 @@ class GANPlotter:
 
                 plt.subplots_adjust(right=0.9)
 
+                axes[0, 0].set_ylabel("Traning data")
+                axes[1, 0].set_ylabel("Train. prediction")
+                axes[2, 0].set_ylabel("Validation data")
+                axes[3, 0].set_ylabel("Val. prediction")
+
                 name = k + "_train_val_pred_images_4x8.png"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=150)
+                fig.savefig(path, format="png", dpi=DPI)
+                plt.close(fig)
+
+    def plot_single_sample_prediction(self, fcgan_keys=None, dcgan_keys=None):
+        """
+        Expects at least one of fcgan_keys or dcgan_keys to be a 2-tuple of keys to use in plot.
+        """
+        idx = 38
+        configs = (
+            ("fc", fcgan_keys, self.fcgan_checkpoints),
+            ("dc", dcgan_keys, self.dcgan_checkpoints),
+        )
+
+        for type, keys, checkpoints in configs:
+            if keys:
+                assert len(keys) == 2
+
+                generators = []
+                generator_labels = []
+                for k in keys:
+                    generators.append(
+                        self._load_generator(
+                            checkpoints[k]["generator_state_dict"],
+                            type=type,
+                            dropout_rate=checkpoints[k]["dropout"],
+                        )
+                    )
+                    generator_labels.append(k)
+
+                fig = gan_single_prediction_plot(
+                    generators[0],
+                    generators[1],
+                    self.forward_network,
+                    self.test_loader,
+                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
+                    idx,
+                    ZDIM,
+                    generator_labels,
+                )
+
+                name = type + "gan_single_prediction.png"
+                path = Path(self.savefig_dir) / Path(name)
+                fig.savefig(path, format="png", dpi=DPI)
+                plt.close(fig)
+
+    def plot_prediction_comparison(self, fcgan_labels=None, dcgan_labels=None):
+        six_indices = [110, 4, 301, 256, 155, 406]
+        types = ["fc", "dc"]
+        network_labels = [fcgan_labels, dcgan_labels]
+        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
+            generator_dict = {}
+            for k in cp.keys():
+                generator = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type=types[j],
+                    dropout_rate=cp[k]["dropout"],
+                )
+                generator_dict[k] = generator
+            fig = gan_prediction_comparison(
+                generator_dict,
+                self.test_loader,
+                six_indices,
+                ZDIM,
+                generator_labels=network_labels[j],
+            )
+
+            name = types[j] + "gan_prediction_comparison.png"
+            path = Path(self.savefig_dir) / Path(name)
+            fig.savefig(path, format="png", dpi=DPI)
+            plt.close(fig)
+
+    def plot_multiple_predictions(self):
+        indices = [33, 121, 82, 254, 300, 44, 278, 399, 166, 431]
+        types = ["fc", "dc"]
+        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
+            for k in cp.keys():
+                generator = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type=types[j],
+                    dropout_rate=cp[k]["dropout"],
+                )
+                fig = gan_big_prediction_plot(
+                    generator,
+                    self.forward_network,
+                    self.test_loader,
+                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
+                    indices,
+                    ZDIM,
+                    k,
+                )
+
+                name = k + "_multiple_predictions.png"
+                path = Path(self.savefig_dir) / Path(name)
+                fig.savefig(path, format="png", dpi=DPI)
                 plt.close(fig)
 
     def _load_checkpoints(self, checkpoints_dict):
@@ -198,7 +344,7 @@ class GANPlotter:
                 y_dim=ydim,
                 image_size=im_size,
                 dropout_rate=dropout_rate,
-                features=FEATURE_SCALING,
+                features=self.dc_features,
             )
         elif type == "fc":
             generator = FCGANGenerator(
@@ -207,12 +353,32 @@ class GANPlotter:
                 y_dim=ydim,
                 image_size=im_size,
                 dropout_rate=dropout_rate,
-                features=FEATURE_SCALING,
+                features=self.fc_features,
             )
         else:
             raise TypeError(f"Unknown model type: {type}")
         generator.load_state_dict(state_dict)
         return generator.to(self.device)
+
+    def _load_forward_network(self, forward_network_dict):
+        im_ch, im_size, _ = get_image_size(self.train_loader)
+        out_ch, ydim = get_label_size(self.train_loader)
+
+        fn_checkpoint = torch.load(
+            forward_network_dict["load_path"],
+            weights_only=False,
+        )
+        fn = forward_network_dict["model"]
+        forward_network = fn(
+            im_ch,
+            ydim,
+            activation=Softplus(),
+            image_size=im_size,
+            out_channels=out_ch,
+            dropout_rate=0.5,
+        ).to(self.device)
+        forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
+        return forward_network.to(self.device)
 
     def _generic_1d_plot(
         self,
@@ -227,6 +393,9 @@ class GANPlotter:
         grid_on=True,
         legend_fontsize=10,
         legend_loc="upper right",
+        apply_sma_smoothing=False,
+        linewidth=1,
+        markevery=1,
     ):
         """
         1-dimensional plotting using matplotlib.
@@ -245,7 +414,10 @@ class GANPlotter:
         else:
             plot_fn = axes.plot
 
-        plot_fn(xdata, ydata, label=label)
+        if apply_sma_smoothing:
+            ydata = moving_average(ydata, SMA_WINDOW_SIZE)
+
+        plot_fn(xdata, ydata, label=label, linewidth=linewidth, markevery=markevery)
         axes.set_xlabel(xlabel)
         axes.set_ylabel(ylabel)
         if legend:
@@ -285,6 +457,9 @@ class GANPlotter:
                 grid_on=grid_on,
                 legend_fontsize=legend_fontsize,
                 legend_loc=legend_loc,
+                apply_sma_smoothing=True,
+                markevery=3,
+                linewidth=1,
             )
 
         # Plot forward error
@@ -303,6 +478,9 @@ class GANPlotter:
                 grid_on=grid_on,
                 legend_fontsize=legend_fontsize,
                 legend_loc=legend_loc,
+                apply_sma_smoothing=True,
+                markevery=3,
+                linewidth=1,
             )
 
         return fig
@@ -313,3 +491,15 @@ class GANPlotter:
         im = ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
         ax.axis("off")
         return im
+
+    @staticmethod
+    def _setup_data_loader(dataset, sampler=None):
+        loader = None
+        if dataset:
+            loader = DataLoader(
+                dataset,
+                batch_size=3000,
+                sampler=sampler,
+                pin_memory=True,
+            )
+        return loader

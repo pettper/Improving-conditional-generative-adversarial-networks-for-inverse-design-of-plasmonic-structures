@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from torch.utils.data import DataLoader, RandomSampler
-
 from plots import GANPlotter
+from src.cnn_regression import EfficientNetV2RegressionGeneral
 from src.utils import DimerDataset as Dataset
 from src.utils import DimerVariable
 
@@ -18,69 +17,48 @@ val_dataset = Dataset(
     DimerVariable.CROSS_SECTIONS,
     transform=lambda x: train_dataset.apply_transform(x),
     target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
 )
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=16,
-    sampler=RandomSampler(train_dataset),
-    pin_memory=True,
-)
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    sampler=RandomSampler(val_dataset),
-    pin_memory=True,
+test_dataset = Dataset(
+    test_dir,  # Validation set uses same transforms as in the training set
+    DimerVariable.CROSS_SECTIONS,
+    transform=lambda x: train_dataset.apply_transform(x),
+    target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
 )
 
+forward_network = {
+    "load_path": "delivery/pretrained_cnn_models/last_epoch_effv2_cross_dimer_cylinders_lr00001_drop05.pth.tar",
+    "model": EfficientNetV2RegressionGeneral,
+}
+
 fcgan_files = {
-    "FCGAN with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=0_em=0_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN no dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=0_em=0_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=0_em=0_data=cyl_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP no dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP + Em. no dropout": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
 }
 
 dcgan_files = {
-    "DCGAN with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=0_em=0_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN no dropout": (
+    "DCGAN": (
         "delivery/aip_review_results/dimer_cylinders/dcgan_lp=0_em=0_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=0_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP no dropout": (
+    "DCGAN + LP": (
         "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=0_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=1_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP + Em. no dropout": (
+    "DCGAN + LP + Em.": (
         "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=1_data=cyl_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
@@ -89,6 +67,11 @@ dcgan_files = {
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
+    forward_network,
+    train_dataset,
+    val_dataset,
+    test_dataset,
+    fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
 gan_plotter.plot_training_and_validation_error()
@@ -96,28 +79,47 @@ gan_plotter.plot_error_estimates()
 
 
 fcgan_files = {
-    "FCGAN + LP no dropout epoch 8701": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_best_epoch_8701.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=0_em=0_data=cyl_drop=0.0_feat=4_best_epoch_14901.pth.tar",
         0.0,
     ),
-    "FCGAN + LP no dropout epoch 16501": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.5_best_epoch_16501.pth.tar",
+    "FCGAN + LP": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=0_data=cyl_drop=0.0_feat=4_best_epoch_2901.pth.tar",
         0.0,
     ),
-    "FCGAN + LP + Em. no dropout epoch 20000": (
-        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.5_last_epoch_20000.pth.tar",
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/dimer_cylinders/fcgan_lp=1_em=1_data=cyl_drop=0.0_feat=4_best_epoch_2901.pth.tar",
         0.0,
     ),
 }
-dcgan_files = {}
+dcgan_files = {
+    "DCGAN": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=0_em=0_data=cyl_drop=0.0_best_epoch_6701.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=0_data=cyl_drop=0.0_best_epoch_5001.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP + Em.": (
+        "delivery/aip_review_results/dimer_cylinders/dcgan_lp=1_em=1_data=cyl_drop=0.0_best_epoch_4201.pth.tar",
+        0.0,
+    ),
+}
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
-    train_loader=train_loader,
-    val_loader=val_loader,
+    forward_network,
+    train_dataset,
+    val_dataset,
+    test_dataset,
+    fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/dimer_cylinders/",
 )
 gan_plotter.plot_images()
+gan_plotter.plot_single_sample_prediction(
+    fcgan_keys=["FCGAN", "FCGAN + LP + Em."], dcgan_keys=["DCGAN", "DCGAN + LP + Em."]
+)
 
 
 ############# All structures #################
@@ -132,87 +134,90 @@ val_dataset = Dataset(
     DimerVariable.CROSS_SECTIONS,
     transform=lambda x: train_dataset.apply_transform(x),
     target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
 )
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=16,
-    sampler=RandomSampler(train_dataset),
-    pin_memory=True,
-)
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    sampler=RandomSampler(val_dataset),
-    pin_memory=True,
+test_dataset = Dataset(
+    test_dir,  # Validation set uses same transforms as in the training set
+    DimerVariable.CROSS_SECTIONS,
+    transform=lambda x: train_dataset.apply_transform(x),
+    target_transform=lambda x: train_dataset.apply_target_transform(x),
+    inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
+    inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
 )
 
+forward_network = {
+    "load_path": "delivery/pretrained_cnn_models/last_epoch_effv2_cross_all_structures_lr00001_drop05.pth.tar",
+    "model": EfficientNetV2RegressionGeneral,
+}
+
 fcgan_files = {
-    "FCGAN with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "FCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "FCGAN + LP + Em. no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_last_epoch_20000.pth.tar",
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
         0.0,
     ),
 }
 
 dcgan_files = {
-    "DCGAN with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN no dropout": (
+    "DCGAN": (
         "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP no dropout": (
+    "DCGAN + LP": (
         "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
-    "DCGAN + LP + Em. with dropout": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.5_last_epoch_20000.pth.tar",
-        0.5,
-    ),
-    "DCGAN + LP + Em. no dropout": (
+    "DCGAN + LP + Em.": (
         "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_last_epoch_20000.pth.tar",
         0.0,
     ),
 }
 
 gan_plotter = GANPlotter(
-    fcgan_files, dcgan_files, savefig_dir="./figures/aip_review_changes/all_structures/"
+    fcgan_files,
+    dcgan_files,
+    forward_network,
+    train_dataset,
+    val_dataset,
+    test_dataset,
+    fcgan_feature_scaling=4,
+    savefig_dir="./figures/aip_review_changes/all_structures/",
 )
-gan_plotter.plot()
+gan_plotter.plot_training_and_validation_error()
+gan_plotter.plot_error_estimates()
 
 fcgan_files = {
-    "FCGAN + LP + Em. no dropout": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_2001.pth.tar",
+    "FCGAN": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
+        0.0,
+    ),
+    "FCGAN + LP": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_feat=4_best_epoch_1301.pth.tar",
+        0.0,
+    ),
+    "FCGAN + LP + Em.": (
+        "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_feat=4_best_epoch_1801.pth.tar",
         0.0,
     ),
 }
 dcgan_files = {
-    "DCGAN + LP + Em. no dropout": (
+    "DCGAN": (
+        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_9801.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP": (
+        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1701.pth.tar",
+        0.0,
+    ),
+    "DCGAN + LP + Em.": (
         "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1601.pth.tar",
         0.0,
     ),
@@ -220,8 +225,16 @@ dcgan_files = {
 gan_plotter = GANPlotter(
     fcgan_files,
     dcgan_files,
-    train_loader=train_loader,
-    val_loader=val_loader,
+    forward_network,
+    train_dataset,
+    val_dataset,
+    test_dataset,
+    fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/all_structures/",
 )
 gan_plotter.plot_images()
+gan_plotter.plot_prediction_comparison(
+    fcgan_labels=["FCGAN", "FCGAN + LP", "FCGAN + LP\n+ Em."],
+    dcgan_labels=["DCGAN", "DCGAN + LP", "DCGAN + LP\n+ Em."],
+)
+gan_plotter.plot_multiple_predictions()
