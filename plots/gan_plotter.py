@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import torch
 from cycler import cycler
 from matplotlib import pyplot as plt
@@ -10,10 +11,11 @@ from plots.plot_help_functions import (
     gan_big_prediction_plot,
     gan_prediction_comparison,
     gan_single_prediction_plot,
+    gaussian_lorentzian_plot,
 )
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
-from src.utils import get_image_size, get_label_size, moving_average
+from src.utils import gaussian_fun, get_image_size, get_label_size, moving_average
 
 torch.manual_seed(23)
 
@@ -324,6 +326,63 @@ class GANPlotter:
                 path = Path(self.savefig_dir) / Path(name)
                 fig.savefig(path, format="png", dpi=DPI)
                 plt.close(fig)
+
+    def plot_gaussian_predictions(self, fcgan_keys=None, dcgan_keys=None):
+        with torch.no_grad():
+            lab_ch, ydim = get_label_size(self.train_loader)
+            lda = np.linspace(400, 800, ydim)
+            sca = gaussian_fun(lda, 1.8e-14, 600, 35)
+            abs = gaussian_fun(lda, 2.1e-14, 600, 35)
+            # g = gaussian_fun(lda, 2e-14, 600, 30)
+            # y = torch.Tensor(np.array([[g for _ in range(lab_ch)]]))
+
+            y = torch.Tensor(
+                np.array(
+                    [
+                        [
+                            sca,
+                            abs,
+                        ]
+                    ]
+                )
+            )
+            y = self.train_dataset.apply_target_transform(y)
+            z = torch.normal(0, 1, size=(1, ZDIM))
+            if fcgan_keys:
+                for k in fcgan_keys:
+                    generator = self._load_generator(
+                        self.fcgan_checkpoints[k]["generator_state_dict"],
+                        type="fc",
+                        dropout_rate=self.fcgan_checkpoints[k]["dropout"],
+                    )
+                    x = generator(z, y)
+                    y_pred = self.train_dataset.apply_inverse_target_transform(
+                        self.forward_network(x)
+                    )
+                    fig = gaussian_lorentzian_plot(x, y_pred, lda, sca, abs)
+
+                    name = "fc_gaussian.png"
+                    path = Path(self.savefig_dir) / Path(name)
+                    fig.savefig(path, format="png", dpi=DPI)
+                    plt.close(fig)
+
+            if dcgan_keys:
+                for k in dcgan_keys:
+                    generator = self._load_generator(
+                        self.dcgan_checkpoints[k]["generator_state_dict"],
+                        type="dc",
+                        dropout_rate=self.dcgan_checkpoints[k]["dropout"],
+                    )
+                    x = generator(z, y)
+                    y_pred = self.train_dataset.apply_inverse_target_transform(
+                        self.forward_network(x)
+                    )
+                    fig = gaussian_lorentzian_plot(x, y_pred, lda, sca, abs)
+
+                    name = "dc_gaussian.png"
+                    path = Path(self.savefig_dir) / Path(name)
+                    fig.savefig(path, format="png", dpi=DPI)
+                    plt.close(fig)
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}

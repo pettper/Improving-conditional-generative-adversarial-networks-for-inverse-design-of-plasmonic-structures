@@ -408,3 +408,25 @@ def gan_big_prediction_plot(
         )
 
     return fig
+
+
+def gaussian_lorentzian_plot(x, y_pred, lda, sca, abs):
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+    ax[0, 1].imshow(-x[0, 0], cmap="inferno_r", vmin=-1, vmax=1)
+    ax[0, 1].axis("off")
+    im = ax[1, 1].imshow(x[0, 1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax[1, 1].axis("off")
+    ax[0, 0].plot(lda, sca, label="Gaussian")
+    ax[0, 0].plot(lda, y_pred[0, 0], label="CNN-prediction")
+    ax[0, 0].set_xlabel("Wavelength [nm]")
+    ax[0, 0].set_ylabel("Sca. Cross sec. [m^2]")
+    ax[0, 0].legend()
+    ax[1, 0].plot(lda, abs, label="Gaussian")
+    ax[1, 0].plot(lda, y_pred[0, 1], label="CNN-prediction")
+    ax[1, 0].legend()
+    ax[1, 0].set_xlabel("Wavelength [nm]")
+    ax[1, 0].set_ylabel("Abs. Cross sec. [m^2]")
+
+    fig.colorbar(im, ax=ax[:, 1].tolist())
+
+    return fig

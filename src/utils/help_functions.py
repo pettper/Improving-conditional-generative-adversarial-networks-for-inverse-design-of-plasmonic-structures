@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+from scipy.stats import norm
 from torch import autograd, nn
 from torch.func import jacfwd, jacrev, vmap
 from torch.linalg import matrix_norm
@@ -423,3 +424,8 @@ def moving_average(data, window_size):
     sums = np.convolve(data, window, mode="same")
     counts = np.convolve(np.ones_like(data), window, mode="same")
     return sums / counts
+
+
+def gaussian_fun(x, magnitude, mu, sigma):
+    g = norm.pdf(x, loc=mu, scale=sigma)
+    return g * (magnitude / norm.pdf(mu, mu, sigma))

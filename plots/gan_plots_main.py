@@ -238,3 +238,4 @@ gan_plotter.plot_prediction_comparison(
     dcgan_labels=["DCGAN", "DCGAN + LP", "DCGAN + LP\n+ Em."],
 )
 gan_plotter.plot_multiple_predictions()
+gan_plotter.plot_gaussian_predictions(dcgan_keys=["DCGAN + LP + Em."])
