@@ -10,17 +10,8 @@ from torch.func import jacfwd, jacrev, vmap
 from torch.linalg import matrix_norm
 
 
-def count_parameters(model, exclude_class=None):
-    params = 0
-    for module in model.modules():
-        print(module)
-        if exclude_class and isinstance(module, exclude_class):
-            continue
-
-        # recurse=False ensures we only count parameters unique to this module level
-        for p in module.parameters(recurse=False):
-            params += p.numel()
-    return params
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters())
 
 
 def conv_output_size(input_size, kernel, padding, stride):
