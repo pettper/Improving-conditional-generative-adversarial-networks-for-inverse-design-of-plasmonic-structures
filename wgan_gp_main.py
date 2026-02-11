@@ -13,6 +13,7 @@ from src.cnn_regression import (
     EfficientNetV2RegressionGeneral,
 )
 from src.gan import WGANTrainer
+from src.gan.utils import LabelEmbeddingNetwork
 from src.utils import DimerDataset as Dataset
 from src.utils import (
     DimerVariable,
@@ -122,7 +123,7 @@ class WGANGPMain:
             pin_memory=True,
             num_workers=self.NUM_WORKERS,
             persistent_workers=True,
-            drop_last=True
+            drop_last=True,
         )
         validation_loader = DataLoader(
             validation_dataset,
@@ -306,7 +307,12 @@ class WGANGPMain:
         print(f"Conditional batch normalization: {self.settings['use_cbn']}")
 
         # Print parameters
-        critic_params = count_parameters(self.critic)
+        if self.settings["use_embedding_network"]:
+            critic_params = count_parameters(self.critic)
+        else:
+            critic_params = count_parameters(
+                self.critic, exclude_class=LabelEmbeddingNetwork
+            )
         gen_params = count_parameters(self.generator)
         print(f"Generator parameters: {gen_params}")
         print(f"Critic parameters: {critic_params}")
