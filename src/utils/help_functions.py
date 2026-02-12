@@ -11,9 +11,7 @@ from torch.linalg import matrix_norm
 
 
 def count_parameters(model):
-    # Returns the number of parameters in a pytorch model.
-    params = sum(p.numel() for p in model.parameters())
-    return params
+    return sum(p.numel() for p in model.parameters())
 
 
 def conv_output_size(input_size, kernel, padding, stride):

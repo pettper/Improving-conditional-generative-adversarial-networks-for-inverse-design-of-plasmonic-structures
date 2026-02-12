@@ -122,7 +122,7 @@ class WGANGPMain:
             pin_memory=True,
             num_workers=self.NUM_WORKERS,
             persistent_workers=True,
-            drop_last=True
+            drop_last=True,
         )
         validation_loader = DataLoader(
             validation_dataset,
@@ -310,6 +310,7 @@ class WGANGPMain:
         gen_params = count_parameters(self.generator)
         print(f"Generator parameters: {gen_params}")
         print(f"Critic parameters: {critic_params}")
+        print(f"Total parameters: {critic_params + gen_params}")
 
 
 if __name__ == "__main__":
