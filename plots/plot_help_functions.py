@@ -410,23 +410,50 @@ def gan_big_prediction_plot(
     return fig
 
 
-def gaussian_lorentzian_plot(x, y_pred, lda, sca, abs):
-    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-    ax[0, 1].imshow(-x[0, 0], cmap="inferno_r", vmin=-1, vmax=1)
-    ax[0, 1].axis("off")
-    im = ax[1, 1].imshow(x[0, 1], cmap="inferno_r", vmin=-1, vmax=1)
-    ax[1, 1].axis("off")
-    ax[0, 0].plot(lda, sca, label="Gaussian")
-    ax[0, 0].plot(lda, y_pred[0, 0], label="CNN-prediction")
-    ax[0, 0].set_xlabel("Wavelength [nm]")
-    ax[0, 0].set_ylabel("Sca. Cross sec. [m^2]")
-    ax[0, 0].legend()
-    ax[1, 0].plot(lda, abs, label="Gaussian")
-    ax[1, 0].plot(lda, y_pred[0, 1], label="CNN-prediction")
-    ax[1, 0].legend()
-    ax[1, 0].set_xlabel("Wavelength [nm]")
-    ax[1, 0].set_ylabel("Abs. Cross sec. [m^2]")
+def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
+    prop_cycle = plt.rcParams["axes.prop_cycle"]
+    custom_colors = prop_cycle.by_key()["color"]
 
-    fig.colorbar(im, ax=ax[:, 1].tolist())
+    ax = fig.subplots(1, 2)
+    im = ax[1].imshow(x[1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax[1].axis("off")
 
-    return fig
+    # Use a twin axis to display scattering and absoroption cross section
+    ax[0].plot(lda, sca, label="Gaussian", color=custom_colors[0], marker="")
+    ax[0].plot(
+        lda,
+        y_pred[0],
+        "--",
+        label="CNN-prediction",
+        color=custom_colors[0],
+        marker="",
+    )
+    ax[0].set_xlabel("Wavelength [nm]")
+    ax[0].set_ylabel("Sca. Cross sec. [m^2]", color=custom_colors[0])
+    ax[0].tick_params(axis="y", labelcolor=custom_colors[0])
+    ax[0].grid(True)
+    all_vals = [sca.min(), sca.max(), abs.min(), abs.max(), y_pred.min(), y_pred.max()]
+    ax[0].set_ylim(min(all_vals), 1.3 * max(all_vals))
+    leg = ax[0].legend(loc="upper right")
+    for text in leg.get_texts():
+        text.set_color("black")
+
+    twin_ax = ax[0].twinx()
+    twin_ax.plot(lda, abs, label="Gaussian", color=custom_colors[1], marker="")
+    twin_ax.plot(
+        lda,
+        y_pred[1],
+        "--",
+        label="CNN-prediction",
+        color=custom_colors[1],
+        marker="",
+    )
+    twin_ax.set_xlabel("Wavelength [nm]")
+    twin_ax.set_ylabel("Abs. Cross sec. [m^2]", color=custom_colors[1])
+    twin_ax.tick_params(axis="y", labelcolor=custom_colors[1])
+    twin_ax.set_ylim(ax[0].get_ylim())
+    twin_ax.grid(False)
+
+    fig.colorbar(im, ax=ax[1])
+
+    return

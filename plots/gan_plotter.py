@@ -11,7 +11,7 @@ from plots.plot_help_functions import (
     gan_big_prediction_plot,
     gan_prediction_comparison,
     gan_single_prediction_plot,
-    gaussian_lorentzian_plot,
+    gaussian_spectrum_plot,
 )
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
@@ -76,6 +76,7 @@ class GANPlotter:
 
         # Forward network is used for evaluation
         self.forward_network = self._load_forward_network(forward_network)
+        self.forward_network.eval()
 
         # Feature scaling
         self.fc_features = fcgan_feature_scaling
@@ -157,9 +158,10 @@ class GANPlotter:
             ymin, ymax = axes.get_ylim()
             axes.set_ylim(0.8 * ymin, ymax * 1.75)
 
-        name = "validation_error_2x2_figure.png"
+        name = "validation_error_2x2_figure"
         path = Path(self.savefig_dir) / Path(name)
-        fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight")
         plt.close(fig)
 
     def plot_training_and_validation_error(self):
@@ -231,7 +233,7 @@ class GANPlotter:
 
                 name = k + "_train_val_pred_images_4x8.png"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=DPI)
+                fig.savefig(path, format="png", dpi=DPI, bbox_inches="tight")
                 plt.close(fig)
 
     def plot_single_sample_prediction(self, fcgan_keys=None, dcgan_keys=None):
@@ -271,9 +273,14 @@ class GANPlotter:
                     generator_labels,
                 )
 
-                name = type + "gan_single_prediction.png"
+                name = type + "gan_single_prediction"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=DPI)
+                fig.savefig(
+                    str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                )
+                fig.savefig(
+                    str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+                )
                 plt.close(fig)
 
     def plot_prediction_comparison(self, fcgan_labels=None, dcgan_labels=None):
@@ -297,9 +304,10 @@ class GANPlotter:
                 generator_labels=network_labels[j],
             )
 
-            name = types[j] + "gan_prediction_comparison.png"
+            name = types[j] + "gan_prediction_comparison"
             path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(path, format="png", dpi=DPI)
+            fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+            fig.savefig(str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
     def plot_multiple_predictions(self):
@@ -322,32 +330,46 @@ class GANPlotter:
                     k,
                 )
 
-                name = k + "_multiple_predictions.png"
+                name = k + "_multiple_predictions"
                 path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(path, format="png", dpi=DPI)
+                fig.savefig(
+                    str(path) + ".png",
+                    format="png",
+                    dpi=DPI,
+                )
+                fig.savefig(
+                    str(path) + ".svg",
+                    format="svg",
+                    dpi=DPI,
+                )
                 plt.close(fig)
 
     def plot_gaussian_predictions(self, fcgan_keys=None, dcgan_keys=None):
+        master_fig = plt.figure(figsize=(10, 12))
+        subfigs = master_fig.subfigures(3, 1)
+
         with torch.no_grad():
             lab_ch, ydim = get_label_size(self.train_loader)
             lda = np.linspace(400, 800, ydim)
-            sca = gaussian_fun(lda, 1.8e-14, 600, 35)
-            abs = gaussian_fun(lda, 2.1e-14, 600, 35)
-            # g = gaussian_fun(lda, 2e-14, 600, 30)
-            # y = torch.Tensor(np.array([[g for _ in range(lab_ch)]]))
-
-            y = torch.Tensor(
-                np.array(
-                    [
-                        [
-                            sca,
-                            abs,
-                        ]
-                    ]
-                )
+            sca = np.stack(
+                [
+                    gaussian_fun(lda, 0.4e-14, 650, 35),
+                    gaussian_fun(lda, 3.2e-14, 650, 40),
+                    gaussian_fun(lda, 1.3e-14, 610, 35),
+                ]
             )
+
+            abs = np.stack(
+                [
+                    gaussian_fun(lda, 2.0e-14, 610, 35),
+                    gaussian_fun(lda, 2.9e-14, 575, 60),
+                    gaussian_fun(lda, 2.0e-14, 610, 55),
+                ]
+            )
+            y = torch.Tensor(np.stack([sca, abs], axis=1))
             y = self.train_dataset.apply_target_transform(y)
-            z = torch.normal(0, 1, size=(1, ZDIM))
+            z = torch.normal(0, 1, size=(3, ZDIM))
+
             if fcgan_keys:
                 for k in fcgan_keys:
                     generator = self._load_generator(
@@ -355,16 +377,25 @@ class GANPlotter:
                         type="fc",
                         dropout_rate=self.fcgan_checkpoints[k]["dropout"],
                     )
+                    generator.eval()
                     x = generator(z, y)
                     y_pred = self.train_dataset.apply_inverse_target_transform(
                         self.forward_network(x)
                     )
-                    fig = gaussian_lorentzian_plot(x, y_pred, lda, sca, abs)
+                    for j in range(len(subfigs)):
+                        gaussian_spectrum_plot(
+                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
+                        )
 
-                    name = "fc_gaussian.png"
+                    name = "fc_gaussian"
                     path = Path(self.savefig_dir) / Path(name)
-                    fig.savefig(path, format="png", dpi=DPI)
-                    plt.close(fig)
+                    master_fig.savefig(
+                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                    )
+                    master_fig.savefig(
+                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+                    )
+                    plt.close(master_fig)
 
             if dcgan_keys:
                 for k in dcgan_keys:
@@ -373,16 +404,38 @@ class GANPlotter:
                         type="dc",
                         dropout_rate=self.dcgan_checkpoints[k]["dropout"],
                     )
+                    generator.eval()
                     x = generator(z, y)
                     y_pred = self.train_dataset.apply_inverse_target_transform(
                         self.forward_network(x)
                     )
-                    fig = gaussian_lorentzian_plot(x, y_pred, lda, sca, abs)
+                    for j in range(len(subfigs)):
+                        gaussian_spectrum_plot(
+                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
+                        )
 
-                    name = "dc_gaussian.png"
+                    labels = ["a", "b", "c", "d", "e", "f"]
+                    x_pos = np.array([0.08, 0.49]) + 0.07
+                    y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
+
+                    for j, label in enumerate(labels):
+                        master_fig.text(
+                            x_pos[j % 2],
+                            y_pos[j // 2],
+                            f"({label})",
+                            fontsize=12,
+                            fontweight="bold",
+                        )
+
+                    name = "dc_gaussian"
                     path = Path(self.savefig_dir) / Path(name)
-                    fig.savefig(path, format="png", dpi=DPI)
-                    plt.close(fig)
+                    master_fig.savefig(
+                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                    )
+                    master_fig.savefig(
+                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+                    )
+                    plt.close(master_fig)
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}
@@ -435,7 +488,7 @@ class GANPlotter:
             image_size=im_size,
             out_channels=out_ch,
             dropout_rate=0.5,
-        ).to(self.device)
+        )
         forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
         return forward_network.to(self.device)
 
