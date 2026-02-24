@@ -31,15 +31,19 @@ class DimerVariable(Enum):
         elif key == "cross":
             return DimerVariable.CROSS_SECTIONS
         else:
-            raise Exception("Unknown key, valid keys are 'sca', 'abs', 'rot', 'elip', 'all'.")
+            raise Exception(
+                "Unknown key, valid keys are 'sca', 'abs', 'rot', 'elip', 'all', 'cross'."
+            )
 
     def size(self):
-        if (self == DimerVariable.SCATTERING_CROSS_SECTION or self == DimerVariable.ABSORPTION_CROSS_SECTION
-                or self == DimerVariable.ROTATION or self == DimerVariable.ELLIPTICITY):
+        if (
+            self == DimerVariable.SCATTERING_CROSS_SECTION
+            or self == DimerVariable.ABSORPTION_CROSS_SECTION
+            or self == DimerVariable.ROTATION
+            or self == DimerVariable.ELLIPTICITY
+        ):
             return 1
         elif self == DimerVariable.CROSS_SECTIONS:
             return 2
         else:
             return 4
-
-    

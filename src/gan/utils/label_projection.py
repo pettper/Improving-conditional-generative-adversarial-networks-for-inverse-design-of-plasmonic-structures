@@ -9,8 +9,6 @@ class LabelProjection(nn.Module):
     def __init__(self, proj_dim, channels=2, activation=nn.LeakyReLU(SLOPE), features=4):
         super().__init__()
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
         self.label_transform = nn.Sequential(
             nn.Conv1d(channels, features * 8, 5, stride=2, padding=0),
             nn.BatchNorm1d(features * 8),
@@ -23,7 +21,7 @@ class LabelProjection(nn.Module):
             activation,
             nn.Conv1d(features * 32, features * 128, kernel_size=3, stride=2, padding=1),
             activation,
-        ).to(self.device)
+        )
 
         # Label output layer
         self.label_output = nn.Sequential(
@@ -33,7 +31,7 @@ class LabelProjection(nn.Module):
             nn.Linear(in_features=features * 128, out_features=proj_dim),
             activation,
             nn.Unflatten(dim=1, unflattened_size=(1, proj_dim))
-        ).to(self.device)
+        )
 
     def forward(self, x, y):
         # Label embedding + label projection

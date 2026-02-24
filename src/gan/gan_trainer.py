@@ -1,10 +1,12 @@
-import numpy as np
 import time
+
+import numpy as np
 import torch
+from torch.nn import L1Loss
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
-from torch.nn import L1Loss
-from src.utils import print_gan_losses, estimate_reconstruction_error
+
+from src.utils import estimate_reconstruction_error, print_gan_losses
 
 # PARAMETERS
 Z_DIM = 100
@@ -15,10 +17,19 @@ fixed_noise = torch.normal(0, 1, size=(N_IMAGES, Z_DIM))
 
 
 class GANTrainer:
-
-    def __init__(self, discriminator, generator, discriminator_optimizer, generator_optimizer, training_loader,
-                 validation_loader, device, n_critic=1, load_model_filename=None, save_model_filename=None):
-
+    def __init__(
+        self,
+        discriminator,
+        generator,
+        discriminator_optimizer,
+        generator_optimizer,
+        training_loader,
+        validation_loader,
+        device,
+        n_critic=1,
+        load_model_filename=None,
+        save_model_filename=None,
+    ):
         """
         Trainer object for training a regular GAN-model
         :param discriminator: Discriminator model (nn.Module)
@@ -93,13 +104,19 @@ class GANTrainer:
             # Monitor the reconstruction error every 5th epoch
             if epoch % 5 == 0:
                 # On training data...
-                train_rce_mean, train_rce_var = estimate_reconstruction_error(self.generator, self.training_loader,
-                                                                              self.device, metric=L1Loss())
+                train_rce_mean, train_rce_var = estimate_reconstruction_error(
+                    self.generator, self.training_loader, self.device, metric=L1Loss()
+                )
                 # On validation data...
-                val_rce_mean, val_rce_var = estimate_reconstruction_error(self.generator, self.validation_loader,
-                                                                          self.device, metric=L1Loss())
-                self.reconstruction_error.append([epoch, train_rce_mean, train_rce_var, val_rce_mean, val_rce_var])
-                self.write_reconstruction_error_to_tensorboard(epoch, val_rce_mean, val_rce_var)
+                val_rce_mean, val_rce_var = estimate_reconstruction_error(
+                    self.generator, self.validation_loader, self.device, metric=L1Loss()
+                )
+                self.reconstruction_error.append(
+                    [epoch, train_rce_mean, train_rce_var, val_rce_mean, val_rce_var]
+                )
+                self.write_reconstruction_error_to_tensorboard(
+                    epoch, val_rce_mean, val_rce_var
+                )
 
             # Save model on last epoch
             if ((epoch + 1) == epochs or epoch % 100 == 0) and self.save_model_filename:
@@ -110,7 +127,6 @@ class GANTrainer:
         self.writer.close()
 
     def train_discriminator(self, real, fake, labels):
-
         # Calculate discriminator loss
         real_loss = torch.log(self.discriminator(real, labels)).mean()
         fake_loss = torch.log(1 - self.discriminator(fake, labels)).mean()
@@ -124,7 +140,6 @@ class GANTrainer:
         return disc_loss
 
     def train_generator(self, fake, labels):
-
         # Calculate generator loss
         generator_loss = -torch.log(self.discriminator(fake, labels)).mean()
 
@@ -145,7 +160,9 @@ class GANTrainer:
             if real.shape[0] < n_images:
                 n_images = real.shape[0]
 
-            fake = self.generator(fixed_noise[:n_images].to(self.device), labels[:n_images])
+            fake = self.generator(
+                fixed_noise[:n_images].to(self.device), labels[:n_images]
+            )
 
             # Stores up to n_images
             img_grid_real = make_grid(real[:n_images], normalize=True)
@@ -160,19 +177,19 @@ class GANTrainer:
 
     def save_checkpoint(self):
         state = {
-            'generator_state_dict': self.generator.state_dict(),
-            'generator_optimizer_state_dict': self.gen_optim.state_dict(),
-            'critic_state_dict': self.discriminator.state_dict(),
-            'critic_optimizer_state_dict': self.disc_optim.state_dict(),
-            'reconstruction_error': np.array(self.reconstruction_error)
+            "generator_state_dict": self.generator.state_dict(),
+            "generator_optimizer_state_dict": self.gen_optim.state_dict(),
+            "critic_state_dict": self.discriminator.state_dict(),
+            "critic_optimizer_state_dict": self.disc_optim.state_dict(),
+            "reconstruction_error": np.array(self.reconstruction_error),
         }
         torch.save(state, self.save_model_filename)
-        print(f"Saved checkpoint to, \"{self.save_model_filename}\"")
+        print(f'Saved checkpoint to, "{self.save_model_filename}"')
 
     def load_checkpoint(self, filename):
-        checkpoint = torch.load(filename)
-        self.generator.load_state_dict(checkpoint['generator_state_dict'])
-        self.gen_optim.load_state_dict(checkpoint['generator_optimizer_state_dict'])
-        self.discriminator.load_state_dict(checkpoint['critic_state_dict'])
-        self.disc_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])
-        print(f"Loaded model, \"{filename}\"")
+        checkpoint = torch.load(filename, weights_only=False)
+        self.generator.load_state_dict(checkpoint["generator_state_dict"])
+        self.gen_optim.load_state_dict(checkpoint["generator_optimizer_state_dict"])
+        self.discriminator.load_state_dict(checkpoint["critic_state_dict"])
+        self.disc_optim.load_state_dict(checkpoint["critic_optimizer_state_dict"])
+        print(f'Loaded model, "{filename}"')

@@ -6,10 +6,8 @@ SLOPE = 0.2
 
 class LabelEmbeddingNetwork(nn.Module):
 
-    def __init__(self, proj_dim, channels=2, activation=nn.LeakyReLU(SLOPE), features=4):
+    def __init__(self, proj_dim, channels=2, activation=nn.LeakyReLU(SLOPE), features=4, dropout_rate=0.5):
         super().__init__()
-
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.label_transform = nn.Sequential(
             nn.Conv1d(channels, features * 8, 5, stride=2, padding=0),
@@ -23,16 +21,17 @@ class LabelEmbeddingNetwork(nn.Module):
             activation,
             nn.Conv1d(features * 32, features * 128, kernel_size=3, stride=2, padding=1),
             activation,
-        ).to(self.device)
+        )
 
         # Label output layer
         self.label_output = nn.Sequential(
             # OBS! Kernel size = 5, is an adhoc solution for y.shape = (B, C, 81)
             nn.AvgPool1d(kernel_size=5, stride=1, padding=0),
             nn.Flatten(start_dim=1),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=features * 128, out_features=proj_dim),
             activation
-        ).to(self.device)
+        )
 
     def forward(self, y):
         # Label embedding network forward method. Expects either y -> (B, Y_DIM) or (B, N, Y_DIM) as input.

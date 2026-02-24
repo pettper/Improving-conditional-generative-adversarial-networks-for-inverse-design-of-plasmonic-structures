@@ -5,8 +5,8 @@ from src.gan.utils import LabelEmbeddingNetwork
 
 class DCGANGenerator(nn.Module):
 
-    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=41, proj_dim=50, features=4, image_size=64,
-                 use_cbn=False):
+    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=81, proj_dim=50, features=4, image_size=128,
+                 use_cbn=False, dropout_rate=0.5):
         super().__init__()
 
         self.z_dim = z_dim
@@ -16,20 +16,20 @@ class DCGANGenerator(nn.Module):
         self.use_cbn = use_cbn
 
         self.transform_block = nn.Sequential(
-            nn.Linear(in_features=proj_dim, out_features=features * 256 * 4 * 4),
+            nn.Linear(in_features=proj_dim, out_features=features * 64 * 4 * 4),
             nn.ReLU(),
-            nn.Unflatten(1, (features * 256, 4, 4))
+            nn.Unflatten(1, (features * 64, 4, 4))
         )
         self.noise_layer = nn.Sequential(
             nn.Linear(in_features=z_dim, out_features=proj_dim),
             nn.ReLU(),
         )
-        self.label_embedding = LabelEmbeddingNetwork(self.proj_dim, channels=target_channels, activation=nn.ReLU())
+        self.label_embedding = LabelEmbeddingNetwork(self.proj_dim, channels=target_channels, activation=nn.ReLU(), dropout_rate=dropout_rate)
 
         if self.image_size == 64:
             self.upsampling_block = DCGANGenerator64(out_channels)
         elif self.image_size == 128:
-            self.upsampling_block = DCGANGenerator128(out_channels, use_cbn=self.use_cbn, embedding_size=self.proj_dim)
+            self.upsampling_block = DCGANGenerator128(out_channels, use_cbn=self.use_cbn, embedding_size=self.proj_dim, features=features)
         else:
             raise Exception(f"Image size {self.image_size} is not supported")
 

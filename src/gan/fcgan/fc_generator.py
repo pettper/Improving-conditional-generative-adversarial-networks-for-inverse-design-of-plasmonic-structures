@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 from src.gan.utils import LabelEmbeddingNetwork
@@ -7,8 +6,18 @@ from src.gan.utils import LabelEmbeddingNetwork
 class FullyConnectedGenerator(nn.Module):
     # Adds a more exotic way to input the labels to the generator
 
-    def __init__(self, out_channels, target_channels=2, z_dim=100, y_dim=41, features=4, image_size=128, proj_dim=50,
-                 embed=True):
+    def __init__(
+        self,
+        out_channels,
+        target_channels=2,
+        z_dim=100,
+        y_dim=81,
+        features=4,
+        image_size=128,
+        proj_dim=50,
+        embed=True,
+        dropout_rate=0.5,
+    ):
         super().__init__()
 
         self.z_dim = z_dim
@@ -20,29 +29,43 @@ class FullyConnectedGenerator(nn.Module):
         self.target_channels = target_channels
 
         self.mlp = nn.Sequential(
-            nn.Linear(in_features=proj_dim, out_features=128*features),
+            nn.Linear(in_features=proj_dim, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64 * features, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64 * features, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128 * features, out_features=128 * features),
+            nn.Linear(in_features=64 * features, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=out_channels*image_size*image_size),
+            nn.Linear(
+                in_features=64 * features,
+                out_features=out_channels * image_size * image_size,
+            ),
             nn.Tanh(),
-            nn.Unflatten(dim=1, unflattened_size=(out_channels, image_size, image_size))
+            nn.Unflatten(
+                dim=1, unflattened_size=(out_channels, image_size, image_size)
+            ),
         )
 
         # Label embedding network
-        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU())
+        self.label_embedding = LabelEmbeddingNetwork(
+            proj_dim,
+            channels=target_channels,
+            activation=nn.ReLU(),
+            dropout_rate=dropout_rate,
+        )
 
         # Prepare for addition layer
         self.add_layer = nn.Sequential(
             nn.Flatten(start_dim=1),
-            nn.Linear(in_features=target_channels * y_dim, out_features=target_channels * y_dim),
+            nn.Linear(
+                in_features=target_channels * y_dim,
+                out_features=target_channels * y_dim,
+            ),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         self.noise_layer = nn.Sequential(

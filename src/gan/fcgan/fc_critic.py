@@ -1,12 +1,22 @@
 import torch
 from torch import nn
+
 from src.gan.utils import LabelEmbeddingNetwork
 
 
 class FullyConnectedCritic(nn.Module):
-
-    def __init__(self, in_channels, target_channels=2, y_dim=81,  image_size=128, proj_dim=50, features=4, lp=True,
-                 embed=True):
+    def __init__(
+        self,
+        in_channels,
+        target_channels=2,
+        y_dim=81,
+        image_size=128,
+        proj_dim=50,
+        features=4,
+        lp=True,
+        embed=True,
+        dropout_rate=0.5,
+    ):
         super().__init__()
 
         self.image_size = image_size
@@ -17,36 +27,50 @@ class FullyConnectedCritic(nn.Module):
         # MLP
         self.mlp = nn.Sequential(
             nn.Flatten(start_dim=1),
-            nn.Linear(in_features=in_channels*image_size*image_size, out_features=128*features),
+            nn.Linear(
+                in_features=in_channels * image_size * image_size,
+                out_features=64 * features,
+            ),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=features*128),
+            nn.Linear(in_features=64 * features, out_features=features * 64),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=128*features),
+            nn.Linear(in_features=64 * features, out_features=64 * features),
             nn.ReLU(),
-            nn.Linear(in_features=128 * features, out_features=features * 128),
+            nn.Linear(in_features=64 * features, out_features=features * 64),
             nn.ReLU(),
-            nn.Linear(in_features=128*features, out_features=proj_dim),
+            nn.Linear(in_features=64 * features, out_features=proj_dim),
         )
 
-        # Label embedding layer
-        self.label_embedding = LabelEmbeddingNetwork(proj_dim, channels=target_channels, activation=nn.ReLU())
+        if self.embed:
+            self.label_embedding = LabelEmbeddingNetwork(
+                proj_dim,
+                channels=target_channels,
+                activation=nn.ReLU(),
+                dropout_rate=dropout_rate,
+            )
 
-        # Prepare for addition layer
-        self.add_layer = nn.Sequential(
-            nn.Flatten(start_dim=1),
-            nn.Linear(in_features=target_channels * y_dim, out_features=target_channels * y_dim),
-            nn.ReLU(),
-            nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
-            nn.ReLU()
-        )
+        if not self.embed:
+            self.add_layer = nn.Sequential(
+                nn.Flatten(start_dim=1),
+                nn.Linear(
+                    in_features=target_channels * y_dim,
+                    out_features=target_channels * y_dim,
+                ),
+                nn.ReLU(),
+                nn.Dropout(dropout_rate),
+                nn.Linear(in_features=target_channels * y_dim, out_features=proj_dim),
+                nn.ReLU(),
+            )
 
         # MLP with linear output layer
         self.output_layer = nn.Sequential(
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.ReLU(),
+            nn.Dropout(dropout_rate),
             nn.Linear(in_features=proj_dim, out_features=proj_dim),
             nn.ReLU(),
-            nn.Linear(in_features=proj_dim, out_features=1)
+            nn.Dropout(dropout_rate),
+            nn.Linear(in_features=proj_dim, out_features=1),
         )
 
     def forward(self, x, y):
@@ -76,8 +100,7 @@ class FullyConnectedCritic(nn.Module):
             x = x + y
             return self.output_layer(x)
         else:
-            y = self.add_layer(y)    # -> (B, proj_dim)
-            x = self.mlp(x)          # -> (B, proj_dim)
+            y = self.add_layer(y)  # -> (B, proj_dim)
+            x = self.mlp(x)  # -> (B, proj_dim)
             x = x + y
             return self.output_layer(x)
-

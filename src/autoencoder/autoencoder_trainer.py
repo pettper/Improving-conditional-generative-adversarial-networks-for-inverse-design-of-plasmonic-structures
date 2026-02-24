@@ -1,17 +1,32 @@
 import time
+
 import numpy as np
-from src.utils import (contractive_penalty_v2 as contractive_penalty, decoder_penalty_v2 as decoder_penalty,
-                       print_losses_and_time, print_metric)
 import torch
 from torch.utils.tensorboard import SummaryWriter
+
+from src.utils import contractive_penalty_v2 as contractive_penalty
+from src.utils import decoder_penalty_v2 as decoder_penalty
+from src.utils import print_losses_and_time, print_metric
+
 # from torchviz import make_dot
 
 
 class AutoencoderTrainer:
-
-    def __init__(self, autoencoder, optimizer, loss_function, training_loader, validation_loader, device, metric=None,
-                 load_model_filename=None, save_model_filename=None, use_contractive_penalty=False,
-                 use_decoder_penalty=False, hyperparams=None):
+    def __init__(
+        self,
+        autoencoder,
+        optimizer,
+        loss_function,
+        training_loader,
+        validation_loader,
+        device,
+        metric=None,
+        load_model_filename=None,
+        save_model_filename=None,
+        use_contractive_penalty=False,
+        use_decoder_penalty=False,
+        hyperparams=None,
+    ):
         """
         Initializes an autoencoder trainer object
         :param device:
@@ -37,7 +52,9 @@ class AutoencoderTrainer:
         self.validation_loader = validation_loader
         self.metric = metric
         self.writer = SummaryWriter()
-        self.best_loss = np.power(10, 64, dtype=np.float64)  # Initialize to large number
+        self.best_loss = np.power(
+            10, 64, dtype=np.float64
+        )  # Initialize to large number
         self.losses = []
         self.metric_values = []
         self.save_model_filename = save_model_filename
@@ -46,8 +63,8 @@ class AutoencoderTrainer:
         self.device = device
 
         if hyperparams is not None:
-            self.lambda_c = hyperparams['lambda_c']
-            self.lambda_d = hyperparams['lambda_d']
+            self.lambda_c = hyperparams["lambda_c"]
+            self.lambda_d = hyperparams["lambda_d"]
         else:
             self.lambda_c = 1.0
             self.lambda_d = 1.0
@@ -106,18 +123,29 @@ class AutoencoderTrainer:
 
             # Store losses
             self.losses.append([epoch, epoch_training_loss, epoch_validation_loss])
-            self.metric_values.append([epoch, epoch_training_metric, epoch_validation_metric])
+            self.metric_values.append(
+                [epoch, epoch_training_metric, epoch_validation_metric]
+            )
 
             # Print and write losses and metrics
             if self.metric is not None:
-                self.write_summary(epoch, epoch_training_loss, epoch_validation_loss,
-                                   epoch_training_metric, epoch_validation_metric)
+                self.write_summary(
+                    epoch,
+                    epoch_training_loss,
+                    epoch_validation_loss,
+                    epoch_training_metric,
+                    epoch_validation_metric,
+                )
                 if epoch % 10 == 0:
-                    print_metric(epoch, epoch_training_metric, epoch_validation_metric, elapsed)
+                    print_metric(
+                        epoch, epoch_training_metric, epoch_validation_metric, elapsed
+                    )
             else:
                 self.write_summary(epoch, epoch_training_loss, epoch_validation_loss)
                 if epoch % 10 == 0:
-                    print_losses_and_time(epoch, epoch_training_loss, epoch_validation_loss, elapsed)
+                    print_losses_and_time(
+                        epoch, epoch_training_loss, epoch_validation_loss, elapsed
+                    )
 
             # Save a checkpoint if there is a new best validation loss for the epoch
             if epoch_validation_loss < self.best_loss and self.save_model_filename:
@@ -156,12 +184,27 @@ class AutoencoderTrainer:
         labels = labels.requires_grad_(True)
         loss = self.loss_function(labels, output)
         if self.use_contractive_penalty:
-            loss = loss + self.lambda_c * contractive_penalty(self.autoencoder, labels, self.device).mean()
+            loss = (
+                loss
+                + self.lambda_c
+                * contractive_penalty(self.autoencoder, labels, self.device).mean()
+            )
         if self.use_decoder_penalty:
-            loss = loss + self.lambda_d * decoder_penalty(self.autoencoder, labels, self.device).mean()
+            loss = (
+                loss
+                + self.lambda_d
+                * decoder_penalty(self.autoencoder, labels, self.device).mean()
+            )
         return loss
 
-    def write_summary(self, epoch, training_loss, validation_loss, training_metric=None, validation_metric=None):
+    def write_summary(
+        self,
+        epoch,
+        training_loss,
+        validation_loss,
+        training_metric=None,
+        validation_metric=None,
+    ):
         # Writes the current training loss and validation loss to tensorboard
         self.writer.add_scalar("Loss/training", training_loss, epoch)
         self.writer.add_scalar("Loss/validation", validation_loss, epoch)
@@ -174,20 +217,20 @@ class AutoencoderTrainer:
 
     def save_checkpoint(self):
         state = {
-            'model_state_dict': self.autoencoder.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'losses': np.array(self.losses),
-            'best_loss': self.best_loss,
-            'metric_values': np.array(self.metric_values)
+            "model_state_dict": self.autoencoder.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "losses": np.array(self.losses),
+            "best_loss": self.best_loss,
+            "metric_values": np.array(self.metric_values),
         }
         torch.save(state, self.save_model_filename)
-        print(f"Saved checkpoint to, \"{self.save_model_filename}\"")
+        print(f'Saved checkpoint to, "{self.save_model_filename}"')
 
     def load_checkpoint(self, filename):
-        checkpoint = torch.load(filename)
-        self.autoencoder.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.best_loss = checkpoint['best_loss']
-        self.losses = checkpoint['losses'].tolist()
-        self.metric_values = checkpoint['metric_values'].tolist()
-        print(f"Loaded model, \"{filename}\"")
+        checkpoint = torch.load(filename, weights_only=False)
+        self.autoencoder.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.best_loss = checkpoint["best_loss"]
+        self.losses = checkpoint["losses"].tolist()
+        self.metric_values = checkpoint["metric_values"].tolist()
+        print(f'Loaded model, "{filename}"')
