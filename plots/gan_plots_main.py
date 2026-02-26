@@ -130,7 +130,6 @@ gan_plotter.plot_single_sample_prediction(
 )
 """
 
-
 ############# All structures #################
 root_dir = Path("./data/anisotropic_au_structures_train_val_test")
 train_dir = root_dir.joinpath(Path("training/featherfiles/"))
@@ -256,6 +255,8 @@ gan_plotter.plot_prediction_comparison(
     fcgan_labels=["FCGAN", "FCGAN + LP", "FCGAN + LP\n+ Em."],
     dcgan_labels=["DCGAN", "DCGAN + LP", "DCGAN + LP\n+ Em."],
 )
+"""
 gan_plotter.plot_multiple_predictions()
 """
 gan_plotter.plot_gaussian_predictions(dcgan_keys=["DCGAN + LP + Em."])
+"""
