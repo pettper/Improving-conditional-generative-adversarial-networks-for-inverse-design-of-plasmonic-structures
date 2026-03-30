@@ -10,4 +10,6 @@ runs/
 /pytorch_env.yml
 /delivery/dropout_experiment/
 /delivery/pretrained_cnn_models/
+/delivery/aip_review_results/
 /tmp/*
+figures/*
