@@ -80,13 +80,21 @@ def gan_single_prediction_plot(
         ax2.set_title(network_labels[1], fontsize=FS, weight="bold")
         # Prediction plots, GAN-network 1
         lda = np.linspace(400, 800, ydim)
-        ax3.plot(lda, original_label[0], label="FEM", linewidth=3, linestyle="solid")
+        ax3.plot(
+            lda,
+            original_label[0],
+            label="FEM",
+            linewidth=3,
+            linestyle="solid",
+            marker="",
+        )
         ax3.plot(
             lda,
             fake_label[0],
             label="Pred. " + network_labels[0],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax3.plot(
             lda,
@@ -94,20 +102,34 @@ def gan_single_prediction_plot(
             label="Pred. " + network_labels[1],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax3.plot(
-            lda, real_label[0], label="Pred. real", linewidth=3, linestyle="dashdot"
+            lda,
+            real_label[0],
+            label="Pred. real",
+            linewidth=3,
+            linestyle="dashdot",
+            marker="",
         )
         ax3.set_xlabel("Wavelength [nm]", fontsize=FS)
         ax3.set_ylabel("Sca. cross sec. [m^2]", fontsize=FS)
         ax3.legend(fontsize=fs)
-        ax4.plot(lda, original_label[1], label="FEM", linewidth=3, linestyle="solid")
+        ax4.plot(
+            lda,
+            original_label[1],
+            label="FEM",
+            linewidth=3,
+            linestyle="solid",
+            marker="",
+        )
         ax4.plot(
             lda,
             fake_label[1],
             label="Pred. " + network_labels[0],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax4.plot(
             lda,
@@ -115,9 +137,15 @@ def gan_single_prediction_plot(
             label="Pred. " + network_labels[1],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax4.plot(
-            lda, real_label[1], label="Pred. real", linewidth=3, linestyle="dashdot"
+            lda,
+            real_label[1],
+            label="Pred. real",
+            linewidth=3,
+            linestyle="dashdot",
+            marker="",
         )
         ax4.set_xlabel("Wavelength [nm]", fontsize=FS)
         ax4.set_ylabel("Abs. cross sec. [m^2]", fontsize=FS)

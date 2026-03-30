@@ -158,6 +158,19 @@ class GANPlotter:
             ymin, ymax = axes.get_ylim()
             axes.set_ylim(0.8 * ymin, ymax * 1.75)
 
+        # To label each subfigure
+        labels = ["a)", "b)", "c)", "d)"]
+        for i, axes in enumerate(ax.flatten()):
+            axes.text(
+                0.13,
+                0.91,
+                labels[i],
+                transform=axes.transAxes,
+                fontsize="medium",
+                va="top",
+                ha="right",
+            )
+
         name = "validation_error_2x2_figure"
         path = Path(self.savefig_dir) / Path(name)
         fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
@@ -310,8 +323,12 @@ class GANPlotter:
             fig.savefig(str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight")
             plt.close(fig)
 
-    def plot_multiple_predictions(self):
-        indices = [33, 121, 82, 254, 300, 44, 278, 399, 166, 431]
+    def plot_multiple_predictions(self, indices=None, name_suffix=""):
+        if indices:
+            idx = indices
+        else:
+            idx = [6, 18, 48, 59, 143, 224, 255, 285, 298, 426]
+            idx = [255, 48, 426, 6, 143, 285, 18, 59, 298, 224]
         types = ["fc", "dc"]
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
             for k in cp.keys():
@@ -325,12 +342,13 @@ class GANPlotter:
                     self.forward_network,
                     self.test_loader,
                     lambda x: self.test_dataset.apply_inverse_target_transform(x),
-                    indices,
+                    idx,
                     ZDIM,
                     k,
                 )
 
-                name = k + "_multiple_predictions"
+                assert type(name_suffix) is str
+                name = k + "_multiple_predictions" + name_suffix
                 path = Path(self.savefig_dir) / Path(name)
                 fig.savefig(
                     str(path) + ".png",
@@ -424,7 +442,6 @@ class GANPlotter:
                             y_pos[j // 2],
                             f"({label})",
                             fontsize=12,
-                            fontweight="bold",
                         )
 
                     name = "dc_gaussian"
