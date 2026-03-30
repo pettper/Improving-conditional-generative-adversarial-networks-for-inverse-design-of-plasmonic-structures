@@ -296,32 +296,33 @@ class GANPlotter:
                 )
                 plt.close(fig)
 
-    def plot_prediction_comparison(self, fcgan_labels=None, dcgan_labels=None):
+    def plot_prediction_comparison(self, gan_keys, figname="gan_model_prediction_comparison"):
         six_indices = [110, 4, 301, 256, 155, 406]
         types = ["fc", "dc"]
-        network_labels = [fcgan_labels, dcgan_labels]
+        network_labels = []
+        generator_dict = {}
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
-            generator_dict = {}
             for k in cp.keys():
-                generator = self._load_generator(
-                    cp[k]["generator_state_dict"],
-                    type=types[j],
-                    dropout_rate=cp[k]["dropout"],
-                )
-                generator_dict[k] = generator
-            fig = gan_prediction_comparison(
-                generator_dict,
-                self.test_loader,
-                six_indices,
-                ZDIM,
-                generator_labels=network_labels[j],
-            )
+                if k in gan_keys:
+                    generator = self._load_generator(
+                        cp[k]["generator_state_dict"],
+                        type=types[j],
+                        dropout_rate=cp[k]["dropout"],
+                    )
+                    generator_dict[k] = generator
+                    network_labels.append(k)
+        fig = gan_prediction_comparison(
+            generator_dict,
+            self.test_loader,
+            six_indices,
+            ZDIM,
+            generator_labels=network_labels,
+        )
 
-            name = types[j] + "gan_prediction_comparison"
-            path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
-            fig.savefig(str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight")
-            plt.close(fig)
+        path = Path(self.savefig_dir) / Path(figname)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
 
     def plot_multiple_predictions(self, indices=None, name_suffix=""):
         if indices:
@@ -362,7 +363,7 @@ class GANPlotter:
                 )
                 plt.close(fig)
 
-    def plot_gaussian_predictions(self, fcgan_keys=None, dcgan_keys=None):
+    def plot_gaussian_predictions(self, fcgan_keys_pair=None, dcgan_keys_pair=None):
         master_fig = plt.figure(figsize=(10, 12))
         subfigs = master_fig.subfigures(3, 1)
 
@@ -388,18 +389,26 @@ class GANPlotter:
             y = self.train_dataset.apply_target_transform(y)
             z = torch.normal(0, 1, size=(3, ZDIM))
 
-            if fcgan_keys:
-                for k in fcgan_keys:
-                    generator = self._load_generator(
-                        self.fcgan_checkpoints[k]["generator_state_dict"],
-                        type="fc",
-                        dropout_rate=self.fcgan_checkpoints[k]["dropout"],
-                    )
-                    generator.eval()
-                    x = generator(z, y)
-                    y_pred = self.train_dataset.apply_inverse_target_transform(
-                        self.forward_network(x)
-                    )
+            if fcgan_keys_pair:
+                for key_pair in fcgan_keys_pair:
+                    x_list = []
+                    y_pred_list = []
+                    labels = []
+                    for k in key_pair:
+                        generator = self._load_generator(
+                            self.fcgan_checkpoints[k]["generator_state_dict"],
+                            type="fc",
+                            dropout_rate=self.fcgan_checkpoints[k]["dropout"],
+                        )
+                        generator.eval()
+                        x = generator(z, y)
+                        y_pred = self.train_dataset.apply_inverse_target_transform(
+                            self.forward_network(x)
+                        )
+                        x_list.append(x)
+                        y_pred_list.append(y_pred)
+                        labels.append(k)
+
                     for j in range(len(subfigs)):
                         gaussian_spectrum_plot(
                             subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
@@ -411,35 +420,43 @@ class GANPlotter:
                         str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
                     )
                     master_fig.savefig(
-                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+                        str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
                     )
                     plt.close(master_fig)
 
-            if dcgan_keys:
-                for k in dcgan_keys:
-                    generator = self._load_generator(
-                        self.dcgan_checkpoints[k]["generator_state_dict"],
-                        type="dc",
-                        dropout_rate=self.dcgan_checkpoints[k]["dropout"],
-                    )
-                    generator.eval()
-                    x = generator(z, y)
-                    y_pred = self.train_dataset.apply_inverse_target_transform(
-                        self.forward_network(x)
-                    )
+            if dcgan_keys_pair:
+                for key_pair in dcgan_keys_pair:
+                    for k in key_pair:
+                        x_list = []
+                        y_pred_list = []
+                        labels = []
+                        generator = self._load_generator(
+                            self.dcgan_checkpoints[k]["generator_state_dict"],
+                            type="dc",
+                            dropout_rate=self.dcgan_checkpoints[k]["dropout"],
+                        )
+                        generator.eval()
+                        x = generator(z, y)
+                        y_pred = self.train_dataset.apply_inverse_target_transform(
+                            self.forward_network(x)
+                        )
+                        x_list.append(x)
+                        y_pred_list.append(y_pred)
+                        labels.append(k)
+
                     for j in range(len(subfigs)):
                         gaussian_spectrum_plot(
                             subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
                         )
 
-                    labels = ["a", "b", "c", "d", "e", "f"]
-                    x_pos = np.array([0.08, 0.49]) + 0.07
+                    labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                    x_pos = np.array([0.08, 0.49, 0.90]) + 0.07
                     y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
 
                     for j, label in enumerate(labels):
                         master_fig.text(
-                            x_pos[j % 2],
-                            y_pos[j // 2],
+                            x_pos[j % 3],
+                            y_pos[j // 3],
                             f"({label})",
                             fontsize=12,
                         )
@@ -450,7 +467,7 @@ class GANPlotter:
                         str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
                     )
                     master_fig.savefig(
-                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+                        str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
                     )
                     plt.close(master_fig)
 

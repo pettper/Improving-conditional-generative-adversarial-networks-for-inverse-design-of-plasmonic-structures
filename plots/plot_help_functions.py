@@ -438,20 +438,39 @@ def gan_big_prediction_plot(
     return fig
 
 
-def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
+def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
+
+    # Parse data 
+    x1 = x_pair[0]
+    x2 = x_pair[1]
+    y_pred1 = y_pair[0]
+    y_pred2 = y_pair[1]
+    label1 = labels[0]
+    labels = labels[1]
+
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     custom_colors = prop_cycle.by_key()["color"]
 
-    ax = fig.subplots(1, 2)
-    im = ax[1].imshow(x[1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax = fig.subplots(1, 3)
+    im = ax[1].imshow(x1[1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax[2].imshow(x2[1], cmap="inferno_r", vmin=-1, vmax=1)
     ax[1].axis("off")
+    ax[2].axis("off")
 
-    # Use a twin axis to display scattering and absoroption cross section
+    # Use a twin axis to display scattering and absorption cross section
     ax[0].plot(lda, sca, label="Gaussian", color=custom_colors[0], marker="")
     ax[0].plot(
         lda,
-        y_pred[0],
+        y_pred1[0],
         "--",
+        label="CNN-prediction",
+        color=custom_colors[0],
+        marker="",
+    )
+    ax[0].plot(
+        lda,
+        y_pred2[0],
+        ":",
         label="CNN-prediction",
         color=custom_colors[0],
         marker="",
@@ -460,7 +479,7 @@ def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
     ax[0].set_ylabel("Sca. Cross sec. [m^2]", color=custom_colors[0])
     ax[0].tick_params(axis="y", labelcolor=custom_colors[0])
     ax[0].grid(True)
-    all_vals = [sca.min(), sca.max(), abs.min(), abs.max(), y_pred.min(), y_pred.max()]
+    all_vals = [sca.min(), sca.max(), abs.min(), abs.max(), y_pred1.min(), y_pred1.max(), y_pred2.min(), y_pred2.max()]
     ax[0].set_ylim(min(all_vals), 1.3 * max(all_vals))
     leg = ax[0].legend(loc="upper right")
     for text in leg.get_texts():
@@ -470,9 +489,17 @@ def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
     twin_ax.plot(lda, abs, label="Gaussian", color=custom_colors[1], marker="")
     twin_ax.plot(
         lda,
-        y_pred[1],
+        y_pred1[1],
         "--",
-        label="CNN-prediction",
+        label=f"CNN-prediction, {label1}",
+        color=custom_colors[1],
+        marker="",
+    )
+    twin_ax.plot(
+        lda,
+        y_pred1[1],
+        ":",
+        label=f"CNN-prediction, {label2}",
         color=custom_colors[1],
         marker="",
     )
