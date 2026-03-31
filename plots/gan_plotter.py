@@ -296,7 +296,9 @@ class GANPlotter:
                 )
                 plt.close(fig)
 
-    def plot_prediction_comparison(self, gan_keys, figname="gan_model_prediction_comparison"):
+    def plot_prediction_comparison(
+        self, gan_keys, figname="gan_model_prediction_comparison"
+    ):
         six_indices = [110, 4, 301, 256, 155, 406]
         types = ["fc", "dc"]
         network_labels = []
@@ -363,8 +365,8 @@ class GANPlotter:
                 )
                 plt.close(fig)
 
-    def plot_gaussian_predictions(self, fcgan_keys_pair=None, dcgan_keys_pair=None):
-        master_fig = plt.figure(figsize=(10, 12))
+    def plot_gaussian_predictions(self, fcgan_key_pair=None, dcgan_key_pair=None):
+        master_fig = plt.figure(figsize=(16, 12))
         subfigs = master_fig.subfigures(3, 1)
 
         with torch.no_grad():
@@ -389,87 +391,119 @@ class GANPlotter:
             y = self.train_dataset.apply_target_transform(y)
             z = torch.normal(0, 1, size=(3, ZDIM))
 
-            if fcgan_keys_pair:
-                for key_pair in fcgan_keys_pair:
-                    x_list = []
-                    y_pred_list = []
-                    labels = []
-                    for k in key_pair:
-                        generator = self._load_generator(
-                            self.fcgan_checkpoints[k]["generator_state_dict"],
-                            type="fc",
-                            dropout_rate=self.fcgan_checkpoints[k]["dropout"],
-                        )
-                        generator.eval()
-                        x = generator(z, y)
-                        y_pred = self.train_dataset.apply_inverse_target_transform(
-                            self.forward_network(x)
-                        )
-                        x_list.append(x)
-                        y_pred_list.append(y_pred)
-                        labels.append(k)
-
-                    for j in range(len(subfigs)):
-                        gaussian_spectrum_plot(
-                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
-                        )
-
-                    name = "fc_gaussian"
-                    path = Path(self.savefig_dir) / Path(name)
-                    master_fig.savefig(
-                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+            if fcgan_key_pair:
+                x_list = []
+                y_pred_list = []
+                labels = []
+                for k in fcgan_key_pair:
+                    generator = self._load_generator(
+                        self.fcgan_checkpoints[k]["generator_state_dict"],
+                        type="fc",
+                        dropout_rate=self.fcgan_checkpoints[k]["dropout"],
                     )
-                    master_fig.savefig(
-                        str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+                    generator.eval()
+                    x = generator(z, y)
+                    y_pred = self.train_dataset.apply_inverse_target_transform(
+                        self.forward_network(x)
                     )
-                    plt.close(master_fig)
+                    x_list.append(x)
+                    y_pred_list.append(y_pred)
+                    labels.append(k)
 
-            if dcgan_keys_pair:
-                for key_pair in dcgan_keys_pair:
-                    for k in key_pair:
-                        x_list = []
-                        y_pred_list = []
-                        labels = []
-                        generator = self._load_generator(
-                            self.dcgan_checkpoints[k]["generator_state_dict"],
-                            type="dc",
-                            dropout_rate=self.dcgan_checkpoints[k]["dropout"],
-                        )
-                        generator.eval()
-                        x = generator(z, y)
-                        y_pred = self.train_dataset.apply_inverse_target_transform(
-                            self.forward_network(x)
-                        )
-                        x_list.append(x)
-                        y_pred_list.append(y_pred)
-                        labels.append(k)
-
-                    for j in range(len(subfigs)):
-                        gaussian_spectrum_plot(
-                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
-                        )
-
-                    labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
-                    x_pos = np.array([0.08, 0.49, 0.90]) + 0.07
-                    y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
-
-                    for j, label in enumerate(labels):
-                        master_fig.text(
-                            x_pos[j % 3],
-                            y_pos[j // 3],
-                            f"({label})",
-                            fontsize=12,
-                        )
-
-                    name = "dc_gaussian"
-                    path = Path(self.savefig_dir) / Path(name)
-                    master_fig.savefig(
-                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                for j in range(len(subfigs)):
+                    gaussian_spectrum_plot(
+                        subfigs[j],
+                        [x_list[0][j, :, :, :], x_list[1][j, :, :, :]],
+                        [y_pred_list[0][j], y_pred_list[1][j]],
+                        labels,
+                        lda,
+                        sca[j],
+                        abs[j],
                     )
-                    master_fig.savefig(
-                        str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+
+                labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                x_pos = np.array([0.08, 0.29, 0.51]) + 0.07
+                y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
+
+                for j, label in enumerate(labels):
+                    master_fig.text(
+                        x_pos[j % 3],
+                        y_pos[j // 3],
+                        f"({label})",
+                        fontsize=12,
                     )
-                    plt.close(master_fig)
+
+                # To label the image columns with network labels
+                ax = subfigs[0].get_axes()
+                ax[1].set_title(f"{fcgan_key_pair[0]}", fontsize=14, fontweight="bold")
+                ax[2].set_title(f"{fcgan_key_pair[1]}", fontsize=14, fontweight="bold")
+
+                name = "fc_gaussian"
+                path = Path(self.savefig_dir) / Path(name)
+                master_fig.savefig(
+                    str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                )
+                master_fig.savefig(
+                    str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+                )
+                plt.close(master_fig)
+
+            if dcgan_key_pair:
+                x_list = []
+                y_pred_list = []
+                labels = []
+                for k in dcgan_key_pair:
+                    generator = self._load_generator(
+                        self.dcgan_checkpoints[k]["generator_state_dict"],
+                        type="dc",
+                        dropout_rate=self.dcgan_checkpoints[k]["dropout"],
+                    )
+                    generator.eval()
+                    x = generator(z, y)
+                    y_pred = self.train_dataset.apply_inverse_target_transform(
+                        self.forward_network(x)
+                    )
+                    x_list.append(x)
+                    y_pred_list.append(y_pred)
+                    labels.append(k)
+
+                for j in range(len(subfigs)):
+                    gaussian_spectrum_plot(
+                        subfigs[j],
+                        [x_list[0][j, :, :, :], x_list[1][j, :, :, :]],
+                        [y_pred_list[0][j], y_pred_list[1][j]],
+                        labels,
+                        lda,
+                        sca[j],
+                        abs[j],
+                    )
+
+                labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                x_pos = np.array([0.08, 0.29, 0.51]) + 0.07
+                y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
+
+                for j, label in enumerate(labels):
+                    master_fig.text(
+                        x_pos[j % 3],
+                        y_pos[j // 3],
+                        f"({label})",
+                        fontsize=12,
+                    )
+
+                # To label the image columns with network labels
+                ax = subfigs[0].get_axes()
+                ax[1].set_title(f"{dcgan_key_pair[0]}", fontsize=14, fontweight="bold")
+                ax[2].set_title(f"{dcgan_key_pair[1]}", fontsize=14, fontweight="bold")
+
+                name = "dc_gaussian"
+                path = Path(self.savefig_dir) / Path(name)
+                master_fig.savefig(
+                    str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                )
+                master_fig.savefig(
+                    str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+                )
+                plt.close(master_fig)
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}

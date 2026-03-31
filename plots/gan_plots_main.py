@@ -248,11 +248,13 @@ gan_plotter = GANPlotter(
 )
 gan_plotter.plot_images()
 gan_plotter.plot_prediction_comparison(
-    gan_keys=["FCGAN", "FCGAN + LP + Em.", "DCGAN", "DCGAN + LP + Em."], figname="main_gan_model_prediction_comparison"
+    gan_keys=["FCGAN", "FCGAN + LP + Em.", "DCGAN", "DCGAN + LP + Em."],
+    figname="main_gan_model_prediction_comparison",
 )
 gan_plotter.plot_prediction_comparison(
-    gan_keys=["FCGAN + LP", "DCGAN + LP"], figname="supp_gan_model_prediction_comparison"
+    gan_keys=["FCGAN + LP", "DCGAN + LP"],
+    figname="supp_gan_model_prediction_comparison",
 )
 gan_plotter.plot_multiple_predictions()
-gan_plotter.plot_gaussian_predictions(fcgan_keys_pair=["FCGAN", "FCGAN + LP + Em."])
-gan_plotter.plot_gaussian_predictions(dcgan_keys_pair=["DCGAN", "DCGAN + LP + Em."])
+gan_plotter.plot_gaussian_predictions(fcgan_key_pair=["FCGAN", "FCGAN + LP + Em."])
+gan_plotter.plot_gaussian_predictions(dcgan_key_pair=["DCGAN", "DCGAN + LP + Em."])

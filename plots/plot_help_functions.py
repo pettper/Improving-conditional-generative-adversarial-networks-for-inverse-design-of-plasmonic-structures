@@ -1,3 +1,5 @@
+import textwrap
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -234,7 +236,9 @@ def gan_prediction_comparison(
             network_labels = generator_dict.keys()
         ax[0][0].set_ylabel("Original", fontsize=FS, weight="bold")
         for j, k in enumerate(network_labels):
-            ax[j + 1][0].set_ylabel(k, fontsize=FS, weight="bold")
+            ax[j + 1][0].set_ylabel(
+                textwrap.fill(k, width=12), fontsize=FS, weight="bold"
+            )
 
         # Adds a colorbar
         cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
@@ -439,21 +443,20 @@ def gan_big_prediction_plot(
 
 
 def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
-
-    # Parse data 
+    # Parse data
     x1 = x_pair[0]
     x2 = x_pair[1]
     y_pred1 = y_pair[0]
     y_pred2 = y_pair[1]
     label1 = labels[0]
-    labels = labels[1]
+    label2 = labels[1]
 
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     custom_colors = prop_cycle.by_key()["color"]
 
     ax = fig.subplots(1, 3)
-    im = ax[1].imshow(x1[1], cmap="inferno_r", vmin=-1, vmax=1)
-    ax[2].imshow(x2[1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax[1].imshow(x1[1], cmap="inferno_r", vmin=-1, vmax=1)
+    im = ax[2].imshow(x2[1], cmap="inferno_r", vmin=-1, vmax=1)
     ax[1].axis("off")
     ax[2].axis("off")
 
@@ -463,7 +466,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
         lda,
         y_pred1[0],
         "--",
-        label="CNN-prediction",
+        label=textwrap.fill(f"CNN-prediction, {label1}", width=15),
         color=custom_colors[0],
         marker="",
     )
@@ -471,7 +474,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
         lda,
         y_pred2[0],
         ":",
-        label="CNN-prediction",
+        label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[0],
         marker="",
     )
@@ -479,8 +482,17 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     ax[0].set_ylabel("Sca. Cross sec. [m^2]", color=custom_colors[0])
     ax[0].tick_params(axis="y", labelcolor=custom_colors[0])
     ax[0].grid(True)
-    all_vals = [sca.min(), sca.max(), abs.min(), abs.max(), y_pred1.min(), y_pred1.max(), y_pred2.min(), y_pred2.max()]
-    ax[0].set_ylim(min(all_vals), 1.3 * max(all_vals))
+    all_vals = [
+        sca.min(),
+        sca.max(),
+        abs.min(),
+        abs.max(),
+        y_pred1.min(),
+        y_pred1.max(),
+        y_pred2.min(),
+        y_pred2.max(),
+    ]
+    ax[0].set_ylim(min(all_vals), 1.7 * max(all_vals))
     leg = ax[0].legend(loc="upper right")
     for text in leg.get_texts():
         text.set_color("black")
@@ -491,15 +503,15 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
         lda,
         y_pred1[1],
         "--",
-        label=f"CNN-prediction, {label1}",
+        label=textwrap.fill(f"CNN-prediction, {label1}", width=15),
         color=custom_colors[1],
         marker="",
     )
     twin_ax.plot(
         lda,
-        y_pred1[1],
+        y_pred2[1],
         ":",
-        label=f"CNN-prediction, {label2}",
+        label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[1],
         marker="",
     )
@@ -509,6 +521,6 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     twin_ax.set_ylim(ax[0].get_ylim())
     twin_ax.grid(False)
 
-    fig.colorbar(im, ax=ax[1])
+    fig.colorbar(im, ax=ax, location="right")
 
     return
