@@ -249,39 +249,46 @@ def gan_prediction_comparison(
 
 
 def gan_big_prediction_plot(
-    generator,
+    generators,
     forward_network,
     dataloader,
     inverse_target_transform,
     indices,
     z_dim,
-    network_label,
+    network_labels,
 ):
-    generator.eval()
+    g1 = generators[0].eval()
+    g2 = generators[1].eval()
     forward_network.eval()
     with torch.no_grad():
         # Get data
         real, label = next(iter(dataloader))
         real, label = (real[indices], label[indices])
 
-        # Generate images
+        # To generate images
         z = torch.normal(0, 1, size=(label.shape[0], z_dim))
-        fake = generator(z, label)
+        fake_g1 = g1(z, label)
+        fake_g2 = g2(z, label)
+        fake_labels_g1 = forward_network(fake_g1)
+        fake_labels_g2 = forward_network(fake_g2)
         real_labels = forward_network(real)
-        fake_labels = forward_network(fake)
 
         # Apply inverse transform to the labels to retain original data range
         label = inverse_target_transform(label)
         real_labels = inverse_target_transform(real_labels)
-        fake_labels = inverse_target_transform(fake_labels)
+        fake_labels_g1 = inverse_target_transform(fake_labels_g1)
+        fake_labels_g2 = inverse_target_transform(fake_labels_g1)
 
         # Prepare for plotting
-        original_labels = label.detach()
-        real_labels = real_labels.detach()
-        fake_labels = fake_labels.detach()
-        y_dim = original_labels.shape[-1]
         real = real.detach()
-        fake = fake.detach()
+        fake_g1 = fake_g1.detach()
+        fake_g2 = fake_g2.detach()
+        real_labels = real_labels.detach()
+        fake_labels_g1 = fake_labels_g1.detach()
+        fake_labels_g2 = fake_labels_g2.detach()
+        original_labels = label.detach()
+        y_dim = original_labels.shape[-1]
+        
 
         # 6x5 subplot
         rows = 6
@@ -301,7 +308,7 @@ def gan_big_prediction_plot(
             for j in range(cols):
                 im = i * cols + j
                 im_plot = ax[i][j].imshow(
-                    torch.cat((real[im, 1, :, :], fake[im, 1, :, :]), dim=1),
+                    torch.cat((real[im, 1, :, :], fake_g1[im, 1, :, :], fake_g2[im, 1, :, :]), dim=1),
                     vmin=-1,
                     vmax=1,
                     cmap=cmap,
@@ -309,8 +316,13 @@ def gan_big_prediction_plot(
                 ax[i][j].axvline(
                     128, color="black", linewidth=1
                 )  # Split images with a vertical line
+                ax[i][j].axvline(
+                    256, color="black", linewidth=1
+                )
                 # Scattering cross-section
-                ax[(rows // 3) + i][j].plot(
+                sca_row = (rows // 3) + i
+                abs_row = 2 * (rows // 3) + i
+                ax[sca_row][j].plot(
                     lda,
                     original_labels[im, 0, :],
                     label="FEM",
@@ -318,7 +330,7 @@ def gan_big_prediction_plot(
                     linestyle="solid",
                     marker="",
                 )
-                ax[(rows // 3) + i][j].plot(
+                ax[sca_row][j].plot(
                     lda,
                     real_labels[im, 0, :],
                     label="Pred. real",
@@ -326,16 +338,24 @@ def gan_big_prediction_plot(
                     linestyle="dashdot",
                     marker="",
                 )
-                ax[(rows // 3) + i][j].plot(
+                ax[sca_row][j].plot(
                     lda,
-                    fake_labels[im, 0, :],
-                    label="Pred. " + network_label,
+                    fake_labels_g1[im, 0, :],
+                    label="Pred. " + network_labels[0],
                     linewidth=lw,
                     linestyle="dashed",
                     marker="",
                 )
+                ax[sca_row][j].plot(
+                    lda,
+                    fake_labels_g2[im, 0, :],
+                    label="Pred. " + network_labels[1],
+                    linewidth=lw,
+                    linestyle="densely dotted",
+                    marker="",
+                )
                 # Absorption cross-section
-                (line1,) = ax[2 * (rows // 3) + i][j].plot(
+                (line1,) = ax[abs_row][j].plot(
                     lda,
                     original_labels[im, 1, :],
                     label="FEM",
@@ -343,7 +363,7 @@ def gan_big_prediction_plot(
                     linestyle="solid",
                     marker="",
                 )
-                (line2,) = ax[2 * (rows // 3) + i][j].plot(
+                (line2,) = ax[abs_row][j].plot(
                     lda,
                     real_labels[im, 1, :],
                     label="Pred. real",
@@ -351,16 +371,24 @@ def gan_big_prediction_plot(
                     linestyle="dashdot",
                     marker="",
                 )
-                (line3,) = ax[2 * (rows // 3) + i][j].plot(
+                (line3,) = ax[abs_row][j].plot(
                     lda,
-                    fake_labels[im, 1, :],
-                    label="Pred. " + network_label,
+                    fake_labels_g1[im, 1, :],
+                    label="Pred. " + network_labels[0],
                     linewidth=lw,
                     linestyle="dashed",
                     marker="",
                 )
+                (line4,) = ax[abs_row][j].plot(
+                    lda,
+                    fake_labels_g2[im, 1, :],
+                    label="Pred. " + network_labels[1],
+                    linewidth=lw,
+                    linestyle="densely dotted",
+                    marker="",
+                )
                 plt.figlegend(
-                    handles=[line1, line2, line3],
+                    handles=[line1, line2, line3, line4],
                     fontsize=FS + 4,
                     loc="lower right",
                     ncol=3,
@@ -432,7 +460,7 @@ def gan_big_prediction_plot(
             fontsize=FS + 6,
         )
         plt.annotate(
-            "Original | " + network_label,
+            "Original | " + network_labels[0] + " | " + network_labels[1],
             (0.35, 0.90),
             xycoords="figure fraction",
             fontsize=FS + 8,
@@ -473,7 +501,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     ax[0].plot(
         lda,
         y_pred2[0],
-        ":",
+        "densely dotted",
         label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[0],
         marker="",
@@ -510,7 +538,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     twin_ax.plot(
         lda,
         y_pred2[1],
-        ":",
+        "densely dotted",
         label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[1],
         marker="",
