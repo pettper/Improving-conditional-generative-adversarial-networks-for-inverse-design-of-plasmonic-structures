@@ -552,3 +552,47 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     fig.colorbar(im, ax=ax, location="right")
 
     return
+
+
+def data_samples_plot(data_loader, inverse_target_transform, indices=(222, 777, 1333, 1888), sample_labels=["Dimer cylinder", "Dimer prism", "Dimer diamond", "Ellipsoid"]):
+
+    n_samples=4
+    assert isinstance(indices, tuple) and len(indices) == n_samples
+    
+    # To make a figure with six axes, row 1: 0, 1, 2, 3, row 2: 4, 5
+    fig = plt.figure(figsize=(12, 8))
+    gs = fig.add_gridspec(2, 4)
+    specs = [gs[0, 0], gs[0, 1], gs[0, 2], gs[0, 3], gs[1, 0:2], gs[1, 2:4]]
+    ax = [fig.add_subplot(spec) for spec in specs]
+
+    cmap = plt.get_cmap("inferno_r")
+
+    with torch.no_grad():
+        image, label = next(iter(data_loader))
+        image, label = (image[indices], label[indices])
+        label = inverse_target_transform(label)
+        ydim = label.shape[-1]
+        lda = np.linspace(400, 800, ydim)
+
+        for j in range(n_samples):
+            ax[j].imshow(image[j,1,:,:], vmin=-1, vmax=1, cmap=cmap)
+            plt.setp(ax[j], xticks=[], yticks=[])
+        
+        for j in range(n_samples):
+            ax[4].plot(lda, label[j,0,:], label=sample_labels[j])
+            ax[5].plot(lda, label[j,1,:], label=sample_labels[j])
+
+        ax[4].xlabel("Wavelength [nm]")
+        ax[5].xlabel("Wavelength [nm]")
+        ax[4].ylabel("Sca. Cross Sec. [m^2]")
+        ax[5].ylabel("Abs. Cross Sec. [m^2]")
+
+        ax[4].legend()
+        ax[5].legend()
+
+    return fig
+
+
+
+
+

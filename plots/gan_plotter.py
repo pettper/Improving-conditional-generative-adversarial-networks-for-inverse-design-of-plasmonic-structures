@@ -12,6 +12,7 @@ from plots.plot_help_functions import (
     gan_prediction_comparison,
     gan_single_prediction_plot,
     gaussian_spectrum_plot,
+    data_samples_plot
 )
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
@@ -504,6 +505,9 @@ class GANPlotter:
                     str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
                 )
                 plt.close(master_fig)
+
+    def plot_data_samples(self):
+        fig = data_samples_plot(self.train_loader, lambda x: self.train_dataset.apply_inverse_target_transform(x))
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}
