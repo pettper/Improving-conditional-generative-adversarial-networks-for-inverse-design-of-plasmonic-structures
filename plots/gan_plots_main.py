@@ -256,6 +256,11 @@ gan_plotter.plot_prediction_comparison(
     gan_keys=["FCGAN + LP", "DCGAN + LP"],
     figname="supp_gan_model_prediction_comparison",
 )
-gan_plotter.plot_multiple_predictions()
+gan_plotter.plot_multiple_predictions(
+    gan_key_pair=("DCGAN", "DCGAN + LP + Em."), name_suffix="dcgan"
+)
+gan_plotter.plot_multiple_predictions(
+    gan_key_pair=("FCGAN", "FCGAN + LP + Em."), name_suffix="fcgan"
+)
 gan_plotter.plot_gaussian_predictions(fcgan_key_pair=["FCGAN", "FCGAN + LP + Em."])
 gan_plotter.plot_gaussian_predictions(dcgan_key_pair=["DCGAN", "DCGAN + LP + Em."])

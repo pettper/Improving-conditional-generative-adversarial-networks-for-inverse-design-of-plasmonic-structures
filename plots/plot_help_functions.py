@@ -1,5 +1,6 @@
 import textwrap
 
+import matplotlib.ticker as ticker
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -277,7 +278,7 @@ def gan_big_prediction_plot(
         label = inverse_target_transform(label)
         real_labels = inverse_target_transform(real_labels)
         fake_labels_g1 = inverse_target_transform(fake_labels_g1)
-        fake_labels_g2 = inverse_target_transform(fake_labels_g1)
+        fake_labels_g2 = inverse_target_transform(fake_labels_g2)
 
         # Prepare for plotting
         real = real.detach()
@@ -291,7 +292,7 @@ def gan_big_prediction_plot(
 
         # 6x5 subplot
         rows = 6
-        cols = 5
+        cols = 4
         fig, ax = plt.subplots(6, cols, figsize=(13, 10))
 
         # Colormap
@@ -351,7 +352,7 @@ def gan_big_prediction_plot(
                     fake_labels_g2[im, 0, :],
                     label="Pred. " + network_labels[1],
                     linewidth=lw,
-                    linestyle="densely dotted",
+                    linestyle="dotted",
                     marker="",
                 )
                 # Absorption cross-section
@@ -384,21 +385,36 @@ def gan_big_prediction_plot(
                     fake_labels_g2[im, 1, :],
                     label="Pred. " + network_labels[1],
                     linewidth=lw,
-                    linestyle="densely dotted",
+                    linestyle="dotted",
                     marker="",
                 )
                 plt.figlegend(
                     handles=[line1, line2, line3, line4],
                     fontsize=FS + 4,
                     loc="lower right",
-                    ncol=3,
+                    ncol=2,
                     bbox_to_anchor=(1.00, 0.02),
                 )
 
         annotations = [
-            ["a)", "b)", "c)", "d)", "e)", "f)"],
-            ["g)", "h)", "i)", "j)", "k)", "l)"],
-            ["m)", "n)", "o)", "p)", "q)", "r)"],
+            "a)",
+            "b)",
+            "c)",
+            "d)",
+            "e)",
+            "f)",
+            "g)",
+            "h)",
+            "i)",
+            "j)",
+            "k)",
+            "l)",
+            "m)",
+            "n)",
+            "o)",
+            "p)",
+            "q)",
+            "r)",
         ]
         # Remove ticks on image plots and ticklabels label plot
         for i in range(rows // 3):
@@ -408,19 +424,19 @@ def gan_big_prediction_plot(
                 if i < 1:
                     plt.setp(ax[2 * (rows // 3) + i][j], xticklabels=[])
                 ax[i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
-                    xy=(0.08, 0.80),
+                    xy=(0.02, 0.70),
                     xycoords="axes fraction",
                 )
                 ax[(rows // 3) + i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
                     xy=(0.08, 0.80),
                     xycoords="axes fraction",
                 )
                 ax[2 * (rows // 3) + i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
                     xy=(0.08, 0.80),
                     xycoords="axes fraction",
@@ -429,16 +445,17 @@ def gan_big_prediction_plot(
         # Set axes limits and grid to true for cross section plots
         for i in range(rows // 3, rows):
             for j in range(cols):
-                ax[i][j].set_ylim(0, 6.0e-14)
+                ax[i][j].set_ylim(-0.1e-14, 7.50e-14)
                 ax[i][j].grid(True)
                 ax[i][j].set_xticks([400, 500, 600, 700, 800])
+                ax[i][j].yaxis.set_major_locator(ticker.MultipleLocator(2.0e-14))
 
         # Add a colorbar
         cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
         cb = fig.colorbar(im_plot, cax=cb_ax)
         cb.ax.tick_params(labelsize=FS + 8)
 
-        plt.subplots_adjust(wspace=0.2, hspace=0.3)
+        plt.subplots_adjust(wspace=0.2, hspace=0.2)
         plt.annotate(
             "Sca. cross sec. [m^2]",
             (0.08, 0.385),
@@ -501,7 +518,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     ax[0].plot(
         lda,
         y_pred2[0],
-        "densely dotted",
+        ":",
         label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[0],
         marker="",
@@ -538,7 +555,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     twin_ax.plot(
         lda,
         y_pred2[1],
-        "densely dotted",
+        ":",
         label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[1],
         marker="",
@@ -573,8 +590,6 @@ def data_samples_plot(
 
     with torch.no_grad():
         image, label = next(iter(data_loader))
-        print(image.shape)
-        print(label.shape)
         image, label = (image[indices, :, :, :], label[indices, :, :])
         label = inverse_target_transform(label)
         ydim = label.shape[-1]
@@ -624,5 +639,14 @@ def data_samples_plot(
         cbar_ax = fig.add_axes([0.91, 0.53, 0.02, 0.33])
         im = ax[0].get_images()[0]
         fig.colorbar(im, cax=cbar_ax)
+
+        for j, l in enumerate(["a)", "b)", "c)", "d)", "e)", "f)"]):
+            ax[j].text(
+                0.9,
+                0.9,
+                l,
+                transform=ax[j].transAxes,
+                fontsize=10,
+            )
 
     return fig

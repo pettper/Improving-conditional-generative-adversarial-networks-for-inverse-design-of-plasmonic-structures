@@ -327,44 +327,59 @@ class GANPlotter:
         fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
         plt.close(fig)
 
-    def plot_multiple_predictions(self, indices=None, name_suffix=""):
+    def plot_multiple_predictions(self, gan_key_pair, indices=None, name_suffix=""):
+        assert isinstance(gan_key_pair, tuple) and len(gan_key_pair) == 2
         if indices:
             idx = indices
         else:
             idx = [6, 18, 48, 59, 143, 224, 255, 285, 298, 426]
-            idx = [255, 48, 426, 6, 143, 285, 18, 59, 298, 224]
-        types = ["fc", "dc"]
-        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
-            for k in cp.keys():
-                generator = self._load_generator(
+            idx = [255, 48, 426, 78, 143, 18, 59, 298]  # 6
+        generators = []
+        for k in gan_key_pair:
+            if k in self.fcgan_checkpoints.keys():
+                cp = self.fcgan_checkpoints
+                g = self._load_generator(
                     cp[k]["generator_state_dict"],
-                    type=types[j],
+                    type="fc",
                     dropout_rate=cp[k]["dropout"],
                 )
-                fig = gan_big_prediction_plot(
-                    generator,
-                    self.forward_network,
-                    self.test_loader,
-                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
-                    idx,
-                    ZDIM,
-                    k,
+                generators.append(g)
+            elif k in self.dcgan_checkpoints.keys():
+                cp = self.dcgan_checkpoints
+                g = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type="dc",
+                    dropout_rate=cp[k]["dropout"],
                 )
+                generators.append(g)
+            else:
+                raise ValueError(
+                    f"Provided key {k} is not found in any checkpoint dict."
+                )
+        fig = gan_big_prediction_plot(
+            generators,
+            self.forward_network,
+            self.test_loader,
+            lambda x: self.test_dataset.apply_inverse_target_transform(x),
+            idx,
+            ZDIM,
+            gan_key_pair,
+        )
 
-                assert type(name_suffix) is str
-                name = k + "_multiple_predictions" + name_suffix
-                path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(
-                    str(path) + ".png",
-                    format="png",
-                    dpi=DPI,
-                )
-                fig.savefig(
-                    str(path) + ".svg",
-                    format="svg",
-                    dpi=DPI,
-                )
-                plt.close(fig)
+        assert type(name_suffix) is str
+        name = "multiple_predictions_" + name_suffix
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(
+            str(path) + ".png",
+            format="png",
+            dpi=DPI,
+        )
+        fig.savefig(
+            str(path) + ".eps",
+            format="eps",
+            dpi=DPI,
+        )
+        plt.close(fig)
 
     def plot_gaussian_predictions(self, fcgan_key_pair=None, dcgan_key_pair=None):
         master_fig = plt.figure(figsize=(16, 12))
