@@ -427,3 +427,15 @@ def moving_average(data, window_size):
 def gaussian_fun(x, magnitude, mu, sigma):
     g = norm.pdf(x, loc=mu, scale=sigma)
     return g * (magnitude / norm.pdf(mu, mu, sigma))
+
+
+def find_generalization_gap(train_err, val_err, threshold=0.1):
+    """
+    INPUTS:
+        train_err: 1d array of size n
+        val_err: 1d array of size n 
+    """
+    diff = val_err - train_err
+    percent_diff = diff / val_err
+    return np.argwhere(percent_diff > threshold)[0]
+

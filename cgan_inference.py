@@ -15,7 +15,11 @@ from src.utils import (
     estimate_reconstruction_error,
     get_image_size,
     get_label_size,
+    find_generalization_gap,
+    moving_average
 )
+
+SMA_WINDOW_SIZE = 3
 
 
 class CGANInference:
@@ -65,6 +69,11 @@ class CGANInference:
         # Feature scaling
         self.fc_features = fcgan_feature_scaling
         self.dc_features = dcgan_feature_scaling
+
+    def find_optimal_epoch(self):
+        for cp in [self.fcgan_checkpoints, self.dcgan_checkpoints]:
+            for k, state in cp.items():
+                self._find_and_print_stop_epochs(k, state)
 
     def calculate_metrics(self):
         result = {}
@@ -152,6 +161,15 @@ class CGANInference:
             )
             checkpoints[k]["dropout"] = checkpoints_dict[k][1]
         return checkpoints
+    
+    def _find_and_print_stop_epochs(self, key, state):
+        fw_err = state["forward_error"]
+        im_err = state["reconstruction_error"]
+        fw_err_stop_idx = find_generalization_gap(moving_average(fw_err[:,4], SMA_WINDOW_SIZE), moving_average(fw_err[:,2], SMA_WINDOW_SIZE))
+        im_err_stop_idx = find_generalization_gap(moving_average(im_err[:,3], SMA_WINDOW_SIZE), moving_average(im_err[:,1], SMA_WINDOW_SIZE))
+        struct_im_err_stop_idx = find_generalization_gap(moving_average(im_err[:,7], SMA_WINDOW_SIZE), moving_average(im_err[:,5], SMA_WINDOW_SIZE))
+        print(f"{key}: Stop epoch (forward error, image error, struct image error): ({fw_err[fw_err_stop_idx,0]},{im_err[im_err[im_err_stop_idx,0]]},{im_err[struct_im_err_stop_idx, 0]})")
+    
 
     @staticmethod
     def _setup_data_loader(dataset, sampler=None):
@@ -246,6 +264,7 @@ if __name__ == "__main__":
         test_dataset,
         fcgan_feature_scaling=4,
     )
+    cgan_inference.find_optimal_epoch()
     result = cgan_inference.calculate_metrics()
 
     file_path = Path("tmp/cgan_inference_data.json")
