@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import torch
@@ -246,4 +247,8 @@ if __name__ == "__main__":
         fcgan_feature_scaling=4,
     )
     result = cgan_inference.calculate_metrics()
-    print(result)
+
+    file_path = Path("tmp/cgan_inference_data.json")
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(file_path, "w") as f:
+        json.dump(result, f, indent=4)
