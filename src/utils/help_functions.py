@@ -429,13 +429,13 @@ def gaussian_fun(x, magnitude, mu, sigma):
     return g * (magnitude / norm.pdf(mu, mu, sigma))
 
 
-def find_generalization_gap(train_err, val_err, threshold=0.1):
+def find_generalization_gap_idx(train_err, val_err, threshold=0.1):
     """
     INPUTS:
         train_err: 1d array of size n
-        val_err: 1d array of size n 
+        val_err: 1d array of size n
     """
+    assert train_err.ndim == 1 and val_err.ndim == 1
     diff = val_err - train_err
     percent_diff = diff / val_err
-    return np.argwhere(percent_diff > threshold)[0]
-
+    return np.argwhere(percent_diff > threshold).flatten()[0]

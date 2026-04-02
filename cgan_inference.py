@@ -13,10 +13,10 @@ from src.utils import (
     DimerVariable,
     estimate_forward_error,
     estimate_reconstruction_error,
+    find_generalization_gap_idx,
     get_image_size,
     get_label_size,
-    find_generalization_gap,
-    moving_average
+    moving_average,
 )
 
 SMA_WINDOW_SIZE = 3
@@ -70,10 +70,10 @@ class CGANInference:
         self.fc_features = fcgan_feature_scaling
         self.dc_features = dcgan_feature_scaling
 
-    def find_optimal_epoch(self):
+    def find_optimal_epoch(self, threshold=0.1):
         for cp in [self.fcgan_checkpoints, self.dcgan_checkpoints]:
             for k, state in cp.items():
-                self._find_and_print_stop_epochs(k, state)
+                self._find_and_print_stop_epochs(k, state, threshold=threshold)
 
     def calculate_metrics(self):
         result = {}
@@ -161,15 +161,33 @@ class CGANInference:
             )
             checkpoints[k]["dropout"] = checkpoints_dict[k][1]
         return checkpoints
-    
-    def _find_and_print_stop_epochs(self, key, state):
+
+    def _find_and_print_stop_epochs(self, key, state, threshold=0.1):
         fw_err = state["forward_error"]
         im_err = state["reconstruction_error"]
-        fw_err_stop_idx = find_generalization_gap(moving_average(fw_err[:,4], SMA_WINDOW_SIZE), moving_average(fw_err[:,2], SMA_WINDOW_SIZE))
-        im_err_stop_idx = find_generalization_gap(moving_average(im_err[:,3], SMA_WINDOW_SIZE), moving_average(im_err[:,1], SMA_WINDOW_SIZE))
-        struct_im_err_stop_idx = find_generalization_gap(moving_average(im_err[:,7], SMA_WINDOW_SIZE), moving_average(im_err[:,5], SMA_WINDOW_SIZE))
-        print(f"{key}: Stop epoch (forward error, image error, struct image error): ({fw_err[fw_err_stop_idx,0]},{im_err[im_err[im_err_stop_idx,0]]},{im_err[struct_im_err_stop_idx, 0]})")
-    
+        fw_err_stop_idx = find_generalization_gap_idx(
+            moving_average(fw_err[:, 2], SMA_WINDOW_SIZE),
+            moving_average(fw_err[:, 4], SMA_WINDOW_SIZE),
+            threshold=threshold,
+        )
+        im_err_stop_idx = find_generalization_gap_idx(
+            moving_average(im_err[:, 1], SMA_WINDOW_SIZE),
+            moving_average(im_err[:, 3], SMA_WINDOW_SIZE),
+            threshold=threshold,
+        )
+        struct_im_err_stop_idx = find_generalization_gap_idx(
+            moving_average(im_err[:, 5], SMA_WINDOW_SIZE),
+            moving_average(im_err[:, 7], SMA_WINDOW_SIZE),
+            threshold=threshold,
+        )
+        stop_epochs = (
+            int(fw_err[fw_err_stop_idx, 0]),
+            int(im_err[im_err_stop_idx, 0]),
+            int(im_err[struct_im_err_stop_idx, 0]),
+        )
+        print(
+            f"{key:<20}: Stop epoch (forward error, image error, struct image error): ({stop_epochs[0]}, {stop_epochs[1]}, {stop_epochs[2]})"
+        )
 
     @staticmethod
     def _setup_data_loader(dataset, sampler=None):
@@ -264,7 +282,55 @@ if __name__ == "__main__":
         test_dataset,
         fcgan_feature_scaling=4,
     )
-    cgan_inference.find_optimal_epoch()
+    cgan_inference.find_optimal_epoch(threshold=0.2)
+
+    fcgan_files = {
+        "FCGAN": (
+            "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_best_epoch_17301.pth.tar",
+            0.0,
+        ),
+        "FCGAN + LP": (
+            "delivery/aip_review_results/all_structures/fcgan_lp=1_em=0_data=all_drop=0.0_feat=4_best_epoch_1301.pth.tar",
+            0.0,
+        ),
+        "FCGAN + Em.": (
+            "delivery/aip_review_results/all_structures/fcgan_lp=0_em=1_data=all_drop=0.0_feat=4_best_epoch_13701.pth.tar",
+            0.0,
+        ),
+        "FCGAN + LP + Em.": (
+            "delivery/aip_review_results/all_structures/fcgan_lp=1_em=1_data=all_drop=0.0_feat=4_best_epoch_1801.pth.tar",
+            0.0,
+        ),
+    }
+
+    dcgan_files = {
+        "DCGAN": (
+            "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_12501.pth.tar",
+            0.0,
+        ),
+        "DCGAN + LP": (
+            "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1801.pth.tar",
+            0.0,
+        ),
+        "DCGAN + Em.": (
+            "delivery/aip_review_results/all_structures/dcgan_lp=0_em=1_data=all_drop=0.0_best_epoch_4201.pth.tar",
+            0.0,
+        ),
+        "DCGAN + LP + Em.": (
+            "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1401.pth.tar",
+            0.0,
+        ),
+    }
+
+    cgan_inference = CGANInference(
+        fcgan_files,
+        dcgan_files,
+        forward_network,
+        train_dataset,
+        val_dataset,
+        test_dataset,
+        fcgan_feature_scaling=4,
+    )
     result = cgan_inference.calculate_metrics()
 
     file_path = Path("tmp/cgan_inference_data.json")

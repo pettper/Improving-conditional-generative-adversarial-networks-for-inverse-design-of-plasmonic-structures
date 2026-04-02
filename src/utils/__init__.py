@@ -16,6 +16,7 @@ from .help_functions import (
     decoder_penalty_v2,
     estimate_forward_error,
     estimate_reconstruction_error,
+    find_generalization_gap_idx,
     gaussian_fun,
     get_image_size,
     get_label_size,
@@ -28,7 +29,6 @@ from .help_functions import (
     print_losses,
     print_losses_and_time,
     print_metric,
-    find_generalization_gap
 )
 from .loss_functions.msle_loss import MSLELoss
 from .loss_functions.wmse_loss import WMSELoss
