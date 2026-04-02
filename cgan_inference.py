@@ -1,15 +1,21 @@
-import torch
-from torch.utils.data import DataLoader, RandomSampler
-from torch.nn import Softplus
+from pathlib import Path
 
-from src.gan.dcgan.dcgan_generator import DCGANGenerator
-from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
-from src.utils import get_image_size, get_label_size, estimate_forward_error, estimate_reconstruction_error
+import torch
+from torch.nn import Softplus
+from torch.utils.data import DataLoader, RandomSampler
 
 from src.cnn_regression import EfficientNetV2RegressionGeneral
+from src.gan.dcgan.dcgan_generator import DCGANGenerator
+from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
 from src.utils import DimerDataset as Dataset
-from src.utils import DimerVariable
-from pathlib import Path
+from src.utils import (
+    DimerVariable,
+    estimate_forward_error,
+    estimate_reconstruction_error,
+    get_image_size,
+    get_label_size,
+)
+
 
 class CGANInference:
     def __init__(
@@ -62,15 +68,32 @@ class CGANInference:
     def calculate_metrics(self):
         result = {}
         with torch.no_grad():
-            for cp, t in zip([self.fcgan_checkpoints, self.dcgan_checkpoints], ["fc", "dc"]):
+            for cp, t in zip(
+                [self.fcgan_checkpoints, self.dcgan_checkpoints], ["fc", "dc"]
+            ):
                 for k, state in cp.items():
-                    g = self._load_generator(state, type=t, dropout_rate=state["dropout"])
+                    g = self._load_generator(
+                        state["generator_state_dict"],
+                        type=t,
+                        dropout_rate=state["dropout"],
+                    )
                     g.eval()
                     tmp_dict = {}
-                    for data_key, data_loader in zip(["training", "validation", "test"], [self.train_loader, self.val_loader, self.test_loader]):
-                        im_error = estimate_reconstruction_error(g, data_loader, self.device, n=3)
-                        fw_error = estimate_forward_error(g, data_loader, self.device, self.forward_network, n=3)
-                        tmp_dict[data_key] = {"forward_error": fw_error[0], "image_error": im_error[0], "masked_image_error": im_error[2]}
+                    for data_key, data_loader in zip(
+                        ["training", "validation", "test"],
+                        [self.train_loader, self.val_loader, self.test_loader],
+                    ):
+                        im_error = estimate_reconstruction_error(
+                            g, data_loader, self.device, n=3
+                        )
+                        fw_error = estimate_forward_error(
+                            g, data_loader, self.device, self.forward_network, n=3
+                        )
+                        tmp_dict[data_key] = {
+                            "forward_error": fw_error[0],
+                            "image_error": im_error[0],
+                            "masked_image_error": im_error[2],
+                        }
                     result[k] = tmp_dict
         return result
 
@@ -119,7 +142,7 @@ class CGANInference:
         )
         forward_network.load_state_dict(fn_checkpoint["model_state_dict"])
         return forward_network.to(self.device)
-    
+
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}
         for k in checkpoints_dict.keys():
@@ -140,7 +163,7 @@ class CGANInference:
                 pin_memory=True,
             )
         return loader
-    
+
 
 if __name__ == "__main__":
     root_dir = Path("./data/anisotropic_au_structures_train_val_test")
@@ -155,7 +178,9 @@ if __name__ == "__main__":
         transform=lambda x: train_dataset.apply_transform(x),
         target_transform=lambda x: train_dataset.apply_target_transform(x),
         inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
-        inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
+        inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(
+            x
+        ),
     )
     test_dataset = Dataset(
         test_dir,  # Validation set uses same transforms as in the training set
@@ -163,7 +188,9 @@ if __name__ == "__main__":
         transform=lambda x: train_dataset.apply_transform(x),
         target_transform=lambda x: train_dataset.apply_target_transform(x),
         inverse_transform=lambda x: train_dataset.apply_inverse_transform(x),
-        inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(x),
+        inverse_target_transform=lambda x: train_dataset.apply_inverse_target_transform(
+            x
+        ),
     )
 
     forward_network = {
@@ -219,3 +246,4 @@ if __name__ == "__main__":
         fcgan_feature_scaling=4,
     )
     result = cgan_inference.calculate_metrics()
+    print(result)
