@@ -288,7 +288,6 @@ def gan_big_prediction_plot(
         fake_labels_g2 = fake_labels_g2.detach()
         original_labels = label.detach()
         y_dim = original_labels.shape[-1]
-        
 
         # 6x5 subplot
         rows = 6
@@ -308,7 +307,10 @@ def gan_big_prediction_plot(
             for j in range(cols):
                 im = i * cols + j
                 im_plot = ax[i][j].imshow(
-                    torch.cat((real[im, 1, :, :], fake_g1[im, 1, :, :], fake_g2[im, 1, :, :]), dim=1),
+                    torch.cat(
+                        (real[im, 1, :, :], fake_g1[im, 1, :, :], fake_g2[im, 1, :, :]),
+                        dim=1,
+                    ),
                     vmin=-1,
                     vmax=1,
                     cmap=cmap,
@@ -316,9 +318,7 @@ def gan_big_prediction_plot(
                 ax[i][j].axvline(
                     128, color="black", linewidth=1
                 )  # Split images with a vertical line
-                ax[i][j].axvline(
-                    256, color="black", linewidth=1
-                )
+                ax[i][j].axvline(256, color="black", linewidth=1)
                 # Scattering cross-section
                 sca_row = (rows // 3) + i
                 abs_row = 2 * (rows // 3) + i
@@ -554,14 +554,18 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
     return
 
 
-def data_samples_plot(data_loader, inverse_target_transform, indices=(222, 777, 1333, 1888), sample_labels=["Dimer cylinder", "Dimer prism", "Dimer diamond", "Ellipsoid"]):
-
-    n_samples=4
+def data_samples_plot(
+    data_loader,
+    inverse_target_transform,
+    indices=(999, 1444, 777, 1999),
+    sample_labels=["Dimer cylinder", "Dimer prism", "Dimer diamond", "Ellipsoid"],
+):
+    n_samples = 4
     assert isinstance(indices, tuple) and len(indices) == n_samples
-    
+
     # To make a figure with six axes, row 1: 0, 1, 2, 3, row 2: 4, 5
-    fig = plt.figure(figsize=(12, 8))
-    gs = fig.add_gridspec(2, 4)
+    fig = plt.figure(figsize=(9, 5))
+    gs = fig.add_gridspec(2, 4, hspace=0.05, wspace=0.05)
     specs = [gs[0, 0], gs[0, 1], gs[0, 2], gs[0, 3], gs[1, 0:2], gs[1, 2:4]]
     ax = [fig.add_subplot(spec) for spec in specs]
 
@@ -569,30 +573,56 @@ def data_samples_plot(data_loader, inverse_target_transform, indices=(222, 777, 
 
     with torch.no_grad():
         image, label = next(iter(data_loader))
-        image, label = (image[indices], label[indices])
+        print(image.shape)
+        print(label.shape)
+        image, label = (image[indices, :, :, :], label[indices, :, :])
         label = inverse_target_transform(label)
         ydim = label.shape[-1]
         lda = np.linspace(400, 800, ydim)
 
         for j in range(n_samples):
-            ax[j].imshow(image[j,1,:,:], vmin=-1, vmax=1, cmap=cmap)
+            ax[j].imshow(image[j, 1, :, :], vmin=-1, vmax=1, cmap=cmap)
             plt.setp(ax[j], xticks=[], yticks=[])
-        
+
+        linestyles = ["solid", "dashed", "dashdot", "dotted"]
         for j in range(n_samples):
-            ax[4].plot(lda, label[j,0,:], label=sample_labels[j])
-            ax[5].plot(lda, label[j,1,:], label=sample_labels[j])
+            ax[4].plot(
+                lda,
+                label[j, 0, :],
+                label=sample_labels[j],
+                marker="",
+                linestyle=linestyles[j],
+            )
+            ax[5].plot(
+                lda,
+                label[j, 1, :],
+                label=sample_labels[j],
+                marker="",
+                linestyle=linestyles[j],
+            )
 
-        ax[4].xlabel("Wavelength [nm]")
-        ax[5].xlabel("Wavelength [nm]")
-        ax[4].ylabel("Sca. Cross Sec. [m^2]")
-        ax[5].ylabel("Abs. Cross Sec. [m^2]")
+        ax[4].set_xlabel("Wavelength [nm]")
+        ax[5].set_xlabel("Wavelength [nm]")
+        ax[4].set_ylabel("Sca. Cross Sec. [m^2]")
+        ax[4].tick_params(axis="y")
+        ax[5].set_ylabel("Abs. Cross sec. [m^2]")
+        ax[5].tick_params(axis="y")
+        ax[5].yaxis.set_label_position("right")
+        ax[5].yaxis.tick_right()
 
-        ax[4].legend()
-        ax[5].legend()
+        sca_max = torch.max(label[:, 0, :]).item()
+        abs_max = torch.max(label[:, 1, :]).item()
+        ax[4].set_ylim(-0.05 * sca_max, 1.5 * sca_max)
+        ax[5].set_ylim(-0.05 * abs_max, 1.5 * abs_max)
+
+        ax[4].legend(loc="upper left", fontsize=7, ncol=2)
+        ax[5].legend(loc="upper left", fontsize=7, ncol=2)
+
+        ax[4].grid(True)
+        ax[5].grid(True)
+
+        cbar_ax = fig.add_axes([0.91, 0.53, 0.02, 0.33])
+        im = ax[0].get_images()[0]
+        fig.colorbar(im, cax=cbar_ax)
 
     return fig
-
-
-
-
-

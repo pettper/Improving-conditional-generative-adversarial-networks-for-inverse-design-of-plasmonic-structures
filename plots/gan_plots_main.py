@@ -246,7 +246,7 @@ gan_plotter = GANPlotter(
     fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/all_structures/",
 )
-gan_plotter.plot_data_samples()
+gan_plotter.plot_data_samples(prefix="all_structures")
 gan_plotter.plot_images()
 gan_plotter.plot_prediction_comparison(
     gan_keys=["FCGAN", "FCGAN + LP + Em.", "DCGAN", "DCGAN + LP + Em."],

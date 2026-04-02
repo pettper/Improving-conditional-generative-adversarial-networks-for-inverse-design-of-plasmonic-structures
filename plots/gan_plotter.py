@@ -8,11 +8,11 @@ from torch.nn import Softplus
 from torch.utils.data import DataLoader, RandomSampler
 
 from plots.plot_help_functions import (
+    data_samples_plot,
     gan_big_prediction_plot,
     gan_prediction_comparison,
     gan_single_prediction_plot,
     gaussian_spectrum_plot,
-    data_samples_plot
 )
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
 from src.gan.fcgan.fc_generator import FullyConnectedGenerator as FCGANGenerator
@@ -506,8 +506,16 @@ class GANPlotter:
                 )
                 plt.close(master_fig)
 
-    def plot_data_samples(self):
-        fig = data_samples_plot(self.train_loader, lambda x: self.train_dataset.apply_inverse_target_transform(x))
+    def plot_data_samples(self, prefix="nano"):
+        fig = data_samples_plot(
+            self.train_loader,
+            lambda x: self.train_dataset.apply_inverse_target_transform(x),
+        )
+        name = prefix + "_data"
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}
