@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from plots.plot_help_functions import (
     data_samples_plot,
     gan_big_prediction_plot,
+    gan_example_prediction_plot,
     gan_prediction_comparison,
     gan_single_prediction_plot,
     gaussian_spectrum_plot,
@@ -296,6 +297,42 @@ class GANPlotter:
                     str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
                 )
                 plt.close(fig)
+
+    def plot_example_prediction(self, gan_key, name_suffix=""):
+        """
+        Expects gan_key to be a 2-tuple of keys to use in plot.
+        """
+        idx = 152
+
+        if gan_key in self.fcgan_checkpoints.keys():
+            generator = self._load_generator(
+                self.fcgan_checkpoints[gan_key]["generator_state_dict"],
+                type="fc",
+                dropout_rate=self.fcgan_checkpoints[gan_key]["dropout"],
+            )
+        elif gan_key in self.dcgan_checkpoints.keys():
+            generator = self._load_generator(
+                self.fcgan_checkpoints[gan_key]["generator_state_dict"],
+                type="dc",
+                dropout_rate=self.fcgan_checkpoints[gan_key]["dropout"],
+            )
+        else:
+            raise ValueError(f"Checkpoint corresponding to {gan_key} was not found.")
+
+        fig = gan_example_prediction_plot(
+            generator,
+            self.forward_network,
+            self.test_loader,
+            lambda x: self.test_dataset.apply_inverse_target_transform(x),
+            idx,
+            ZDIM,
+        )
+
+        name = "cgan_example_prediction" + name_suffix
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
 
     def plot_prediction_comparison(
         self, gan_keys, figname="gan_model_prediction_comparison"

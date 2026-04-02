@@ -181,6 +181,118 @@ def gan_single_prediction_plot(
         return fig
 
 
+def gan_example_prediction_plot(
+    generator,
+    forward_network,
+    dataloader,
+    inverse_target_transform,
+    idx,
+    z_dim,
+):
+    generator.eval()
+    forward_network.eval()
+
+    with torch.no_grad():
+        real, label = next(iter(dataloader))
+        real, label = (real[idx].unsqueeze(0), label[idx].unsqueeze(0))
+
+        z = torch.normal(0, 1, size=(label.shape[0], z_dim))
+        fake = generator(z, label)
+        real_label = forward_network(real)
+        fake_label = forward_network(fake)
+
+        # Inverse target transform to restore original data range
+        label = inverse_target_transform(label)
+        real_label = inverse_target_transform(real_label)
+        fake_label = inverse_target_transform(fake_label)
+
+        # Prepare for plotting
+        label = label.detach()
+        real_label = real_label.detach()
+        fake_label = fake_label.detach()
+        real = real.detach()
+        fake = fake.detach()
+
+        original_label = label[0]
+        ydim = original_label.shape[-1]
+        ylim = 1.4 * original_label.max().item()
+        real_label = real_label[0]
+        fake_label = fake_label[0]
+        real = real[0]
+        fake = fake[0]
+
+        fig, ax = plt.subplots(2, 2, figsize=(9, 8))
+        ax = ax.flatten()
+
+        # Colormap
+        cmap = plt.get_cmap("inferno_r")
+
+        # Original image plot
+        im_plot = ax[0].imshow(real[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax[0].set_title("Original", weight="bold")
+        # GAN-network 1 image plot
+        ax[1].imshow(fake[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax[1].set_title("cGAN example prediction", weight="bold")
+
+        # Spectral plots
+        lda = np.linspace(400, 800, ydim)
+        for j, a in enumerate(ax[2:]):
+            a.plot(
+                lda,
+                original_label[j],
+                label="FEM",
+                linewidth=1.5,
+                linestyle="solid",
+                marker="",
+            )
+            a.plot(
+                lda,
+                real_label[j],
+                label="Pred. Real",
+                linewidth=1.5,
+                linestyle="--",
+                marker="",
+            )
+            a.plot(
+                lda,
+                fake_label[j],
+                label="Pred. cGAN",
+                linewidth=1.5,
+                linestyle=":",
+                marker="",
+            )
+            a.set_xlabel("Wavelength [nm]")
+            a.legend(loc="upper right", ncol=2, fontsize=9)
+
+        ax[2].set_ylabel("Sca. cross sec. [m^2]")
+        ax[3].set_ylabel("Abs. cross sec. [m^2]")
+
+        # Adjust x-axis and y-axis
+        fs = 9
+        for j in range(2, 4):
+            ax[j].yaxis.get_offset_text().set_fontsize(fs)
+            ax[j].tick_params(axis="y", which="both", labelsize=fs)
+            ax[j].tick_params(axis="x", which="both", labelsize=fs)
+            ax[j].set_ylim(0.0, ylim)
+            ax[j].grid(True)
+
+        annotations = ["a)", "b)", "c)", "d)"]
+        for j, text in enumerate(annotations):
+            ax[j].annotate(text, xy=(0.1, 0.8), xycoords="axes fraction", fontsize=12)
+
+        cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
+        cb = fig.colorbar(im_plot, cax=cb_ax)
+        cb.ax.tick_params(labelsize=12)
+
+        # Adjust space between subplots
+        plt.subplots_adjust(hspace=0.07, wspace=0.17)
+
+        # Remove ticks on image plots
+        for i in range(2):
+            plt.setp(ax[i], xticks=[], yticks=[])
+        return fig
+
+
 def gan_prediction_comparison(
     generator_dict, dataloader, indices, z_dim, generator_labels=None
 ):
