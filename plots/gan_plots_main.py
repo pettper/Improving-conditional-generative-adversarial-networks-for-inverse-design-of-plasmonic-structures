@@ -210,7 +210,7 @@ gan_plotter.plot_error_estimates()
 
 fcgan_files = {
     "FCGAN": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
+        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_best_epoch_17301.pth.tar",
         0.0,
     ),
     "FCGAN + LP": (
@@ -224,15 +224,15 @@ fcgan_files = {
 }
 dcgan_files = {
     "DCGAN": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_9801.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_12501.pth.tar",
         0.0,
     ),
     "DCGAN + LP": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1701.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1801.pth.tar",
         0.0,
     ),
     "DCGAN + LP + Em.": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1601.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1401.pth.tar",
         0.0,
     ),
 }
