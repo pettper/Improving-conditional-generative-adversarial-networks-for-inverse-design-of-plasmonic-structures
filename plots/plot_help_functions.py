@@ -686,7 +686,7 @@ def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
 def data_samples_plot(
     data_loader,
     inverse_target_transform,
-    indices=(999, 1444, 777, 1999),
+    indices=(666, 1111, 333, 1888),
     sample_labels=["Dimer cylinder", "Dimer prism", "Dimer diamond", "Ellipsoid"],
 ):
     n_samples = 4

@@ -5,7 +5,7 @@ import torch
 from cycler import cycler
 from matplotlib import pyplot as plt
 from torch.nn import Softplus
-from torch.utils.data import DataLoader, RandomSampler
+from torch.utils.data import DataLoader
 
 from plots.plot_help_functions import (
     data_samples_plot,
@@ -68,12 +68,8 @@ class GANPlotter:
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
-        self.train_loader = GANPlotter._setup_data_loader(
-            self.train_dataset, RandomSampler(self.train_dataset)
-        )
-        self.val_loader = GANPlotter._setup_data_loader(
-            self.val_dataset, RandomSampler(self.val_dataset)
-        )
+        self.train_loader = GANPlotter._setup_data_loader(self.train_dataset)
+        self.val_loader = GANPlotter._setup_data_loader(self.val_dataset)
         self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
 
         # Forward network is used for evaluation
@@ -482,7 +478,7 @@ class GANPlotter:
                     master_fig.text(
                         x_pos[j % 3],
                         y_pos[j // 3],
-                        f"({label})",
+                        f"{label})",
                         fontsize=12,
                     )
 
@@ -539,7 +535,7 @@ class GANPlotter:
                     master_fig.text(
                         x_pos[j % 3],
                         y_pos[j // 3],
-                        f"({label})",
+                        f"{label})",
                         fontsize=12,
                     )
 

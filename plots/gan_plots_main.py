@@ -256,7 +256,7 @@ gan_plotter.plot_prediction_comparison(
     figname="main_gan_model_prediction_comparison",
 )
 gan_plotter.plot_prediction_comparison(
-    gan_keys=["FCGAN + LP", "DCGAN + LP"],
+    gan_keys=["FCGAN", "FCGAN + LP", "DCGAN", "DCGAN + LP"],
     figname="supp_gan_model_prediction_comparison",
 )
 gan_plotter.plot_multiple_predictions(

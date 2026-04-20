@@ -3,7 +3,7 @@ from pathlib import Path
 
 import torch
 from torch.nn import Softplus
-from torch.utils.data import DataLoader, RandomSampler
+from torch.utils.data import DataLoader
 
 from src.cnn_regression import EfficientNetV2RegressionGeneral
 from src.gan.dcgan.dcgan_generator import DCGANGenerator
@@ -54,12 +54,8 @@ class CGANInference:
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
-        self.train_loader = CGANInference._setup_data_loader(
-            self.train_dataset, RandomSampler(self.train_dataset)
-        )
-        self.val_loader = CGANInference._setup_data_loader(
-            self.val_dataset, RandomSampler(self.val_dataset)
-        )
+        self.train_loader = CGANInference._setup_data_loader(self.train_dataset)
+        self.val_loader = CGANInference._setup_data_loader(self.val_dataset)
         self.test_loader = CGANInference._setup_data_loader(self.test_dataset)
 
         # Forward network is used for evaluation
