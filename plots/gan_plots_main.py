@@ -6,7 +6,6 @@ from src.utils import DimerDataset as Dataset
 from src.utils import DimerVariable
 
 #################### Dimer cylinders ###################
-"""
 root_dir = Path("./data/dimer_cylinder_train_val_test")
 train_dir = root_dir.joinpath(Path("training/featherfiles/"))
 val_dir = root_dir.joinpath(Path("validation/featherfiles/"))
@@ -128,8 +127,6 @@ gan_plotter.plot_images()
 gan_plotter.plot_single_sample_prediction(
     fcgan_keys=["FCGAN", "FCGAN + LP + Em."], dcgan_keys=["DCGAN", "DCGAN + LP + Em."]
 )
-"""
-
 
 ############# All structures #################
 root_dir = Path("./data/anisotropic_au_structures_train_val_test")
@@ -208,13 +205,12 @@ gan_plotter = GANPlotter(
     fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/all_structures/",
 )
-"""
 gan_plotter.plot_training_and_validation_error()
 gan_plotter.plot_error_estimates()
-"""
+
 fcgan_files = {
     "FCGAN": (
-        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_last_epoch_20000.pth.tar",
+        "delivery/aip_review_results/all_structures/fcgan_lp=0_em=0_data=all_drop=0.0_feat=4_best_epoch_17301.pth.tar",
         0.0,
     ),
     "FCGAN + LP": (
@@ -228,15 +224,15 @@ fcgan_files = {
 }
 dcgan_files = {
     "DCGAN": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_9801.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=0_em=0_data=all_drop=0.0_best_epoch_12501.pth.tar",
         0.0,
     ),
     "DCGAN + LP": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1701.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=0_data=all_drop=0.0_best_epoch_1801.pth.tar",
         0.0,
     ),
     "DCGAN + LP + Em.": (
-        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1601.pth.tar",
+        "delivery/aip_review_results/all_structures/dcgan_lp=1_em=1_data=all_drop=0.0_best_epoch_1401.pth.tar",
         0.0,
     ),
 }
@@ -250,12 +246,24 @@ gan_plotter = GANPlotter(
     fcgan_feature_scaling=4,
     savefig_dir="./figures/aip_review_changes/all_structures/",
 )
-"""
+gan_plotter.plot_example_prediction("FCGAN", name_suffix="_fcgan")
+gan_plotter.plot_example_prediction("FCGAN + LP", name_suffix="_fcgan_lp")
+gan_plotter.plot_example_prediction("FCGAN + LP + Em.", name_suffix="_fcgan_lp_em")
+gan_plotter.plot_data_samples(prefix="all_structures")
 gan_plotter.plot_images()
 gan_plotter.plot_prediction_comparison(
-    fcgan_labels=["FCGAN", "FCGAN + LP", "FCGAN + LP\n+ Em."],
-    dcgan_labels=["DCGAN", "DCGAN + LP", "DCGAN + LP\n+ Em."],
+    gan_keys=["FCGAN", "FCGAN + LP + Em.", "DCGAN", "DCGAN + LP + Em."],
+    figname="main_gan_model_prediction_comparison",
 )
-gan_plotter.plot_multiple_predictions()
-"""
-gan_plotter.plot_gaussian_predictions(dcgan_keys=["DCGAN + LP + Em."])
+gan_plotter.plot_prediction_comparison(
+    gan_keys=["FCGAN", "FCGAN + LP", "DCGAN", "DCGAN + LP"],
+    figname="supp_gan_model_prediction_comparison",
+)
+gan_plotter.plot_multiple_predictions(
+    gan_key_pair=("DCGAN", "DCGAN + LP + Em."), name_suffix="dcgan"
+)
+gan_plotter.plot_multiple_predictions(
+    gan_key_pair=("FCGAN", "FCGAN + LP + Em."), name_suffix="fcgan"
+)
+gan_plotter.plot_gaussian_predictions(fcgan_key_pair=["FCGAN", "FCGAN + LP + Em."])
+gan_plotter.plot_gaussian_predictions(dcgan_key_pair=["DCGAN", "DCGAN + LP + Em."])

@@ -16,6 +16,7 @@ from .help_functions import (
     decoder_penalty_v2,
     estimate_forward_error,
     estimate_reconstruction_error,
+    find_generalization_gap_idx,
     gaussian_fun,
     get_image_size,
     get_label_size,

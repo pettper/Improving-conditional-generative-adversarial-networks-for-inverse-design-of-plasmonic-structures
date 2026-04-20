@@ -5,10 +5,12 @@ import torch
 from cycler import cycler
 from matplotlib import pyplot as plt
 from torch.nn import Softplus
-from torch.utils.data import DataLoader, RandomSampler
+from torch.utils.data import DataLoader
 
 from plots.plot_help_functions import (
+    data_samples_plot,
     gan_big_prediction_plot,
+    gan_example_prediction_plot,
     gan_prediction_comparison,
     gan_single_prediction_plot,
     gaussian_spectrum_plot,
@@ -66,12 +68,8 @@ class GANPlotter:
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
-        self.train_loader = GANPlotter._setup_data_loader(
-            self.train_dataset, RandomSampler(self.train_dataset)
-        )
-        self.val_loader = GANPlotter._setup_data_loader(
-            self.val_dataset, RandomSampler(self.val_dataset)
-        )
+        self.train_loader = GANPlotter._setup_data_loader(self.train_dataset)
+        self.val_loader = GANPlotter._setup_data_loader(self.val_dataset)
         self.test_loader = GANPlotter._setup_data_loader(self.test_dataset)
 
         # Forward network is used for evaluation
@@ -157,6 +155,19 @@ class GANPlotter:
         for axes in ax.flatten():
             ymin, ymax = axes.get_ylim()
             axes.set_ylim(0.8 * ymin, ymax * 1.75)
+
+        # To label each subfigure
+        labels = ["a)", "b)", "c)", "d)"]
+        for i, axes in enumerate(ax.flatten()):
+            axes.text(
+                0.13,
+                0.91,
+                labels[i],
+                transform=axes.transAxes,
+                fontsize="medium",
+                va="top",
+                ha="right",
+            )
 
         name = "validation_error_2x2_figure"
         path = Path(self.savefig_dir) / Path(name)
@@ -283,69 +294,128 @@ class GANPlotter:
                 )
                 plt.close(fig)
 
-    def plot_prediction_comparison(self, fcgan_labels=None, dcgan_labels=None):
+    def plot_example_prediction(self, gan_key, name_suffix=""):
+        """
+        Expects gan_key to be a 2-tuple of keys to use in plot.
+        """
+        idx = 152
+
+        if gan_key in self.fcgan_checkpoints.keys():
+            generator = self._load_generator(
+                self.fcgan_checkpoints[gan_key]["generator_state_dict"],
+                type="fc",
+                dropout_rate=self.fcgan_checkpoints[gan_key]["dropout"],
+            )
+        elif gan_key in self.dcgan_checkpoints.keys():
+            generator = self._load_generator(
+                self.fcgan_checkpoints[gan_key]["generator_state_dict"],
+                type="dc",
+                dropout_rate=self.fcgan_checkpoints[gan_key]["dropout"],
+            )
+        else:
+            raise ValueError(f"Checkpoint corresponding to {gan_key} was not found.")
+
+        fig = gan_example_prediction_plot(
+            generator,
+            self.forward_network,
+            self.test_loader,
+            lambda x: self.test_dataset.apply_inverse_target_transform(x),
+            idx,
+            ZDIM,
+        )
+
+        name = "cgan_example_prediction" + name_suffix
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
+
+    def plot_prediction_comparison(
+        self, gan_keys, figname="gan_model_prediction_comparison"
+    ):
         six_indices = [110, 4, 301, 256, 155, 406]
         types = ["fc", "dc"]
-        network_labels = [fcgan_labels, dcgan_labels]
-        for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
-            generator_dict = {}
-            for k in cp.keys():
-                generator = self._load_generator(
-                    cp[k]["generator_state_dict"],
-                    type=types[j],
-                    dropout_rate=cp[k]["dropout"],
-                )
-                generator_dict[k] = generator
-            fig = gan_prediction_comparison(
-                generator_dict,
-                self.test_loader,
-                six_indices,
-                ZDIM,
-                generator_labels=network_labels[j],
-            )
-
-            name = types[j] + "gan_prediction_comparison"
-            path = Path(self.savefig_dir) / Path(name)
-            fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
-            fig.savefig(str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight")
-            plt.close(fig)
-
-    def plot_multiple_predictions(self):
-        indices = [33, 121, 82, 254, 300, 44, 278, 399, 166, 431]
-        types = ["fc", "dc"]
+        network_labels = []
+        generator_dict = {}
         for j, cp in enumerate([self.fcgan_checkpoints, self.dcgan_checkpoints]):
             for k in cp.keys():
-                generator = self._load_generator(
+                if k in gan_keys:
+                    generator = self._load_generator(
+                        cp[k]["generator_state_dict"],
+                        type=types[j],
+                        dropout_rate=cp[k]["dropout"],
+                    )
+                    generator_dict[k] = generator
+                    network_labels.append(k)
+        fig = gan_prediction_comparison(
+            generator_dict,
+            self.test_loader,
+            six_indices,
+            ZDIM,
+            generator_labels=network_labels,
+        )
+
+        path = Path(self.savefig_dir) / Path(figname)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
+
+    def plot_multiple_predictions(self, gan_key_pair, indices=None, name_suffix=""):
+        assert isinstance(gan_key_pair, tuple) and len(gan_key_pair) == 2
+        if indices:
+            idx = indices
+        else:
+            idx = [6, 18, 48, 59, 143, 224, 255, 285, 298, 426]
+            idx = [255, 48, 426, 78, 143, 18, 59, 298]  # 6
+        generators = []
+        for k in gan_key_pair:
+            if k in self.fcgan_checkpoints.keys():
+                cp = self.fcgan_checkpoints
+                g = self._load_generator(
                     cp[k]["generator_state_dict"],
-                    type=types[j],
+                    type="fc",
                     dropout_rate=cp[k]["dropout"],
                 )
-                fig = gan_big_prediction_plot(
-                    generator,
-                    self.forward_network,
-                    self.test_loader,
-                    lambda x: self.test_dataset.apply_inverse_target_transform(x),
-                    indices,
-                    ZDIM,
-                    k,
+                generators.append(g)
+            elif k in self.dcgan_checkpoints.keys():
+                cp = self.dcgan_checkpoints
+                g = self._load_generator(
+                    cp[k]["generator_state_dict"],
+                    type="dc",
+                    dropout_rate=cp[k]["dropout"],
                 )
+                generators.append(g)
+            else:
+                raise ValueError(
+                    f"Provided key {k} is not found in any checkpoint dict."
+                )
+        fig = gan_big_prediction_plot(
+            generators,
+            self.forward_network,
+            self.test_loader,
+            lambda x: self.test_dataset.apply_inverse_target_transform(x),
+            idx,
+            ZDIM,
+            gan_key_pair,
+        )
 
-                name = k + "_multiple_predictions"
-                path = Path(self.savefig_dir) / Path(name)
-                fig.savefig(
-                    str(path) + ".png",
-                    format="png",
-                    dpi=DPI,
-                )
-                fig.savefig(
-                    str(path) + ".svg",
-                    format="svg",
-                    dpi=DPI,
-                )
-                plt.close(fig)
+        assert type(name_suffix) is str
+        name = "multiple_predictions_" + name_suffix
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(
+            str(path) + ".png",
+            format="png",
+            dpi=DPI,
+        )
+        fig.savefig(
+            str(path) + ".eps",
+            format="eps",
+            dpi=DPI,
+        )
+        plt.close(fig)
 
-    def plot_gaussian_predictions(self, fcgan_keys=None, dcgan_keys=None):
-        master_fig = plt.figure(figsize=(10, 12))
+    def plot_gaussian_predictions(self, fcgan_key_pair=None, dcgan_key_pair=None):
+        master_fig = plt.figure(figsize=(16, 12))
         subfigs = master_fig.subfigures(3, 1)
 
         with torch.no_grad():
@@ -370,8 +440,11 @@ class GANPlotter:
             y = self.train_dataset.apply_target_transform(y)
             z = torch.normal(0, 1, size=(3, ZDIM))
 
-            if fcgan_keys:
-                for k in fcgan_keys:
+            if fcgan_key_pair:
+                x_list = []
+                y_pred_list = []
+                labels = []
+                for k in fcgan_key_pair:
                     generator = self._load_generator(
                         self.fcgan_checkpoints[k]["generator_state_dict"],
                         type="fc",
@@ -382,23 +455,53 @@ class GANPlotter:
                     y_pred = self.train_dataset.apply_inverse_target_transform(
                         self.forward_network(x)
                     )
-                    for j in range(len(subfigs)):
-                        gaussian_spectrum_plot(
-                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
-                        )
+                    x_list.append(x)
+                    y_pred_list.append(y_pred)
+                    labels.append(k)
 
-                    name = "fc_gaussian"
-                    path = Path(self.savefig_dir) / Path(name)
-                    master_fig.savefig(
-                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                for j in range(len(subfigs)):
+                    gaussian_spectrum_plot(
+                        subfigs[j],
+                        [x_list[0][j, :, :, :], x_list[1][j, :, :, :]],
+                        [y_pred_list[0][j], y_pred_list[1][j]],
+                        labels,
+                        lda,
+                        sca[j],
+                        abs[j],
                     )
-                    master_fig.savefig(
-                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
-                    )
-                    plt.close(master_fig)
 
-            if dcgan_keys:
-                for k in dcgan_keys:
+                labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                x_pos = np.array([0.08, 0.29, 0.51]) + 0.07
+                y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
+
+                for j, label in enumerate(labels):
+                    master_fig.text(
+                        x_pos[j % 3],
+                        y_pos[j // 3],
+                        f"{label})",
+                        fontsize=12,
+                    )
+
+                # To label the image columns with network labels
+                ax = subfigs[0].get_axes()
+                ax[1].set_title(f"{fcgan_key_pair[0]}", fontsize=14, fontweight="bold")
+                ax[2].set_title(f"{fcgan_key_pair[1]}", fontsize=14, fontweight="bold")
+
+                name = "fc_gaussian"
+                path = Path(self.savefig_dir) / Path(name)
+                master_fig.savefig(
+                    str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                )
+                master_fig.savefig(
+                    str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+                )
+                plt.close(master_fig)
+
+            if dcgan_key_pair:
+                x_list = []
+                y_pred_list = []
+                labels = []
+                for k in dcgan_key_pair:
                     generator = self._load_generator(
                         self.dcgan_checkpoints[k]["generator_state_dict"],
                         type="dc",
@@ -409,33 +512,58 @@ class GANPlotter:
                     y_pred = self.train_dataset.apply_inverse_target_transform(
                         self.forward_network(x)
                     )
-                    for j in range(len(subfigs)):
-                        gaussian_spectrum_plot(
-                            subfigs[j], x[j, :, :, :], y_pred[j], lda, sca[j], abs[j]
-                        )
+                    x_list.append(x)
+                    y_pred_list.append(y_pred)
+                    labels.append(k)
 
-                    labels = ["a", "b", "c", "d", "e", "f"]
-                    x_pos = np.array([0.08, 0.49]) + 0.07
-                    y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
-
-                    for j, label in enumerate(labels):
-                        master_fig.text(
-                            x_pos[j % 2],
-                            y_pos[j // 2],
-                            f"({label})",
-                            fontsize=12,
-                            fontweight="bold",
-                        )
-
-                    name = "dc_gaussian"
-                    path = Path(self.savefig_dir) / Path(name)
-                    master_fig.savefig(
-                        str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                for j in range(len(subfigs)):
+                    gaussian_spectrum_plot(
+                        subfigs[j],
+                        [x_list[0][j, :, :, :], x_list[1][j, :, :, :]],
+                        [y_pred_list[0][j], y_pred_list[1][j]],
+                        labels,
+                        lda,
+                        sca[j],
+                        abs[j],
                     )
-                    master_fig.savefig(
-                        str(path) + ".svg", format="svg", dpi=DPI, bbox_inches="tight"
+
+                labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+                x_pos = np.array([0.08, 0.29, 0.51]) + 0.07
+                y_pos = np.array([0.96, 0.63, 0.30]) - 0.045
+
+                for j, label in enumerate(labels):
+                    master_fig.text(
+                        x_pos[j % 3],
+                        y_pos[j // 3],
+                        f"{label})",
+                        fontsize=12,
                     )
-                    plt.close(master_fig)
+
+                # To label the image columns with network labels
+                ax = subfigs[0].get_axes()
+                ax[1].set_title(f"{dcgan_key_pair[0]}", fontsize=14, fontweight="bold")
+                ax[2].set_title(f"{dcgan_key_pair[1]}", fontsize=14, fontweight="bold")
+
+                name = "dc_gaussian"
+                path = Path(self.savefig_dir) / Path(name)
+                master_fig.savefig(
+                    str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight"
+                )
+                master_fig.savefig(
+                    str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight"
+                )
+                plt.close(master_fig)
+
+    def plot_data_samples(self, prefix="nano"):
+        fig = data_samples_plot(
+            self.train_loader,
+            lambda x: self.train_dataset.apply_inverse_target_transform(x),
+        )
+        name = prefix + "_data"
+        path = Path(self.savefig_dir) / Path(name)
+        fig.savefig(str(path) + ".png", format="png", dpi=DPI, bbox_inches="tight")
+        fig.savefig(str(path) + ".eps", format="eps", dpi=DPI, bbox_inches="tight")
+        plt.close(fig)
 
     def _load_checkpoints(self, checkpoints_dict):
         checkpoints = {}

@@ -1,3 +1,6 @@
+import textwrap
+
+import matplotlib.ticker as ticker
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -80,13 +83,21 @@ def gan_single_prediction_plot(
         ax2.set_title(network_labels[1], fontsize=FS, weight="bold")
         # Prediction plots, GAN-network 1
         lda = np.linspace(400, 800, ydim)
-        ax3.plot(lda, original_label[0], label="FEM", linewidth=3, linestyle="solid")
+        ax3.plot(
+            lda,
+            original_label[0],
+            label="FEM",
+            linewidth=3,
+            linestyle="solid",
+            marker="",
+        )
         ax3.plot(
             lda,
             fake_label[0],
             label="Pred. " + network_labels[0],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax3.plot(
             lda,
@@ -94,20 +105,34 @@ def gan_single_prediction_plot(
             label="Pred. " + network_labels[1],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax3.plot(
-            lda, real_label[0], label="Pred. real", linewidth=3, linestyle="dashdot"
+            lda,
+            real_label[0],
+            label="Pred. real",
+            linewidth=3,
+            linestyle="dashdot",
+            marker="",
         )
         ax3.set_xlabel("Wavelength [nm]", fontsize=FS)
         ax3.set_ylabel("Sca. cross sec. [m^2]", fontsize=FS)
         ax3.legend(fontsize=fs)
-        ax4.plot(lda, original_label[1], label="FEM", linewidth=3, linestyle="solid")
+        ax4.plot(
+            lda,
+            original_label[1],
+            label="FEM",
+            linewidth=3,
+            linestyle="solid",
+            marker="",
+        )
         ax4.plot(
             lda,
             fake_label[1],
             label="Pred. " + network_labels[0],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax4.plot(
             lda,
@@ -115,9 +140,15 @@ def gan_single_prediction_plot(
             label="Pred. " + network_labels[1],
             linewidth=3,
             linestyle="dashed",
+            marker="",
         )
         ax4.plot(
-            lda, real_label[1], label="Pred. real", linewidth=3, linestyle="dashdot"
+            lda,
+            real_label[1],
+            label="Pred. real",
+            linewidth=3,
+            linestyle="dashdot",
+            marker="",
         )
         ax4.set_xlabel("Wavelength [nm]", fontsize=FS)
         ax4.set_ylabel("Abs. cross sec. [m^2]", fontsize=FS)
@@ -146,6 +177,118 @@ def gan_single_prediction_plot(
 
         # Remove ticks on image plots
         for i in range(3):
+            plt.setp(ax[i], xticks=[], yticks=[])
+        return fig
+
+
+def gan_example_prediction_plot(
+    generator,
+    forward_network,
+    dataloader,
+    inverse_target_transform,
+    idx,
+    z_dim,
+):
+    generator.eval()
+    forward_network.eval()
+
+    with torch.no_grad():
+        real, label = next(iter(dataloader))
+        real, label = (real[idx].unsqueeze(0), label[idx].unsqueeze(0))
+
+        z = torch.normal(0, 1, size=(label.shape[0], z_dim))
+        fake = generator(z, label)
+        real_label = forward_network(real)
+        fake_label = forward_network(fake)
+
+        # Inverse target transform to restore original data range
+        label = inverse_target_transform(label)
+        real_label = inverse_target_transform(real_label)
+        fake_label = inverse_target_transform(fake_label)
+
+        # Prepare for plotting
+        label = label.detach()
+        real_label = real_label.detach()
+        fake_label = fake_label.detach()
+        real = real.detach()
+        fake = fake.detach()
+
+        original_label = label[0]
+        ydim = original_label.shape[-1]
+        ylim = 1.4 * original_label.max().item()
+        real_label = real_label[0]
+        fake_label = fake_label[0]
+        real = real[0]
+        fake = fake[0]
+
+        fig, ax = plt.subplots(2, 2, figsize=(9, 8))
+        ax = ax.flatten()
+
+        # Colormap
+        cmap = plt.get_cmap("inferno_r")
+
+        # Original image plot
+        im_plot = ax[0].imshow(real[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax[0].set_title("Original", weight="bold")
+        # GAN-network 1 image plot
+        ax[1].imshow(fake[1, :, :], vmin=-1, vmax=1, cmap=cmap)
+        ax[1].set_title("cGAN example prediction", weight="bold")
+
+        # Spectral plots
+        lda = np.linspace(400, 800, ydim)
+        for j, a in enumerate(ax[2:]):
+            a.plot(
+                lda,
+                original_label[j],
+                label="FEM",
+                linewidth=1.5,
+                linestyle="solid",
+                marker="",
+            )
+            a.plot(
+                lda,
+                real_label[j],
+                label="Pred. Real",
+                linewidth=1.5,
+                linestyle="--",
+                marker="",
+            )
+            a.plot(
+                lda,
+                fake_label[j],
+                label="Pred. cGAN",
+                linewidth=1.5,
+                linestyle=":",
+                marker="",
+            )
+            a.set_xlabel("Wavelength [nm]")
+            a.legend(loc="upper right", ncol=2, fontsize=9)
+
+        ax[2].set_ylabel("Sca. cross sec. [m^2]")
+        ax[3].set_ylabel("Abs. cross sec. [m^2]")
+
+        # Adjust x-axis and y-axis
+        fs = 9
+        for j in range(2, 4):
+            ax[j].yaxis.get_offset_text().set_fontsize(fs)
+            ax[j].tick_params(axis="y", which="both", labelsize=fs)
+            ax[j].tick_params(axis="x", which="both", labelsize=fs)
+            ax[j].set_ylim(0.0, ylim)
+            ax[j].grid(True)
+
+        annotations = ["a)", "b)", "c)", "d)"]
+        for j, text in enumerate(annotations):
+            ax[j].annotate(text, xy=(0.1, 0.8), xycoords="axes fraction", fontsize=12)
+
+        cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
+        cb = fig.colorbar(im_plot, cax=cb_ax)
+        cb.ax.tick_params(labelsize=12)
+
+        # Adjust space between subplots
+        plt.subplots_adjust(hspace=0.07, wspace=0.17)
+
+        # Remove ticks on image plots
+        for i in range(2):
             plt.setp(ax[i], xticks=[], yticks=[])
         return fig
 
@@ -206,7 +349,9 @@ def gan_prediction_comparison(
             network_labels = generator_dict.keys()
         ax[0][0].set_ylabel("Original", fontsize=FS, weight="bold")
         for j, k in enumerate(network_labels):
-            ax[j + 1][0].set_ylabel(k, fontsize=FS, weight="bold")
+            ax[j + 1][0].set_ylabel(
+                textwrap.fill(k, width=12), fontsize=FS, weight="bold"
+            )
 
         # Adds a colorbar
         cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
@@ -217,43 +362,49 @@ def gan_prediction_comparison(
 
 
 def gan_big_prediction_plot(
-    generator,
+    generators,
     forward_network,
     dataloader,
     inverse_target_transform,
     indices,
     z_dim,
-    network_label,
+    network_labels,
 ):
-    generator.eval()
+    g1 = generators[0].eval()
+    g2 = generators[1].eval()
     forward_network.eval()
     with torch.no_grad():
         # Get data
         real, label = next(iter(dataloader))
         real, label = (real[indices], label[indices])
 
-        # Generate images
+        # To generate images
         z = torch.normal(0, 1, size=(label.shape[0], z_dim))
-        fake = generator(z, label)
+        fake_g1 = g1(z, label)
+        fake_g2 = g2(z, label)
+        fake_labels_g1 = forward_network(fake_g1)
+        fake_labels_g2 = forward_network(fake_g2)
         real_labels = forward_network(real)
-        fake_labels = forward_network(fake)
 
         # Apply inverse transform to the labels to retain original data range
         label = inverse_target_transform(label)
         real_labels = inverse_target_transform(real_labels)
-        fake_labels = inverse_target_transform(fake_labels)
+        fake_labels_g1 = inverse_target_transform(fake_labels_g1)
+        fake_labels_g2 = inverse_target_transform(fake_labels_g2)
 
         # Prepare for plotting
-        original_labels = label.detach()
-        real_labels = real_labels.detach()
-        fake_labels = fake_labels.detach()
-        y_dim = original_labels.shape[-1]
         real = real.detach()
-        fake = fake.detach()
+        fake_g1 = fake_g1.detach()
+        fake_g2 = fake_g2.detach()
+        real_labels = real_labels.detach()
+        fake_labels_g1 = fake_labels_g1.detach()
+        fake_labels_g2 = fake_labels_g2.detach()
+        original_labels = label.detach()
+        y_dim = original_labels.shape[-1]
 
         # 6x5 subplot
         rows = 6
-        cols = 5
+        cols = 4
         fig, ax = plt.subplots(6, cols, figsize=(13, 10))
 
         # Colormap
@@ -269,7 +420,10 @@ def gan_big_prediction_plot(
             for j in range(cols):
                 im = i * cols + j
                 im_plot = ax[i][j].imshow(
-                    torch.cat((real[im, 1, :, :], fake[im, 1, :, :]), dim=1),
+                    torch.cat(
+                        (real[im, 1, :, :], fake_g1[im, 1, :, :], fake_g2[im, 1, :, :]),
+                        dim=1,
+                    ),
                     vmin=-1,
                     vmax=1,
                     cmap=cmap,
@@ -277,8 +431,11 @@ def gan_big_prediction_plot(
                 ax[i][j].axvline(
                     128, color="black", linewidth=1
                 )  # Split images with a vertical line
+                ax[i][j].axvline(256, color="black", linewidth=1)
                 # Scattering cross-section
-                ax[(rows // 3) + i][j].plot(
+                sca_row = (rows // 3) + i
+                abs_row = 2 * (rows // 3) + i
+                ax[sca_row][j].plot(
                     lda,
                     original_labels[im, 0, :],
                     label="FEM",
@@ -286,7 +443,7 @@ def gan_big_prediction_plot(
                     linestyle="solid",
                     marker="",
                 )
-                ax[(rows // 3) + i][j].plot(
+                ax[sca_row][j].plot(
                     lda,
                     real_labels[im, 0, :],
                     label="Pred. real",
@@ -294,16 +451,24 @@ def gan_big_prediction_plot(
                     linestyle="dashdot",
                     marker="",
                 )
-                ax[(rows // 3) + i][j].plot(
+                ax[sca_row][j].plot(
                     lda,
-                    fake_labels[im, 0, :],
-                    label="Pred. " + network_label,
+                    fake_labels_g1[im, 0, :],
+                    label="Pred. " + network_labels[0],
                     linewidth=lw,
                     linestyle="dashed",
                     marker="",
                 )
+                ax[sca_row][j].plot(
+                    lda,
+                    fake_labels_g2[im, 0, :],
+                    label="Pred. " + network_labels[1],
+                    linewidth=lw,
+                    linestyle="dotted",
+                    marker="",
+                )
                 # Absorption cross-section
-                (line1,) = ax[2 * (rows // 3) + i][j].plot(
+                (line1,) = ax[abs_row][j].plot(
                     lda,
                     original_labels[im, 1, :],
                     label="FEM",
@@ -311,7 +476,7 @@ def gan_big_prediction_plot(
                     linestyle="solid",
                     marker="",
                 )
-                (line2,) = ax[2 * (rows // 3) + i][j].plot(
+                (line2,) = ax[abs_row][j].plot(
                     lda,
                     real_labels[im, 1, :],
                     label="Pred. real",
@@ -319,26 +484,49 @@ def gan_big_prediction_plot(
                     linestyle="dashdot",
                     marker="",
                 )
-                (line3,) = ax[2 * (rows // 3) + i][j].plot(
+                (line3,) = ax[abs_row][j].plot(
                     lda,
-                    fake_labels[im, 1, :],
-                    label="Pred. " + network_label,
+                    fake_labels_g1[im, 1, :],
+                    label="Pred. " + network_labels[0],
                     linewidth=lw,
                     linestyle="dashed",
                     marker="",
                 )
+                (line4,) = ax[abs_row][j].plot(
+                    lda,
+                    fake_labels_g2[im, 1, :],
+                    label="Pred. " + network_labels[1],
+                    linewidth=lw,
+                    linestyle="dotted",
+                    marker="",
+                )
                 plt.figlegend(
-                    handles=[line1, line2, line3],
+                    handles=[line1, line2, line3, line4],
                     fontsize=FS + 4,
                     loc="lower right",
-                    ncol=3,
+                    ncol=2,
                     bbox_to_anchor=(1.00, 0.02),
                 )
 
         annotations = [
-            ["a)", "b)", "c)", "d)", "e)", "f)"],
-            ["g)", "h)", "i)", "j)", "k)", "l)"],
-            ["m)", "n)", "o)", "p)", "q)", "r)"],
+            "a)",
+            "b)",
+            "c)",
+            "d)",
+            "e)",
+            "f)",
+            "g)",
+            "h)",
+            "i)",
+            "j)",
+            "k)",
+            "l)",
+            "m)",
+            "n)",
+            "o)",
+            "p)",
+            "q)",
+            "r)",
         ]
         # Remove ticks on image plots and ticklabels label plot
         for i in range(rows // 3):
@@ -348,19 +536,19 @@ def gan_big_prediction_plot(
                 if i < 1:
                     plt.setp(ax[2 * (rows // 3) + i][j], xticklabels=[])
                 ax[i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
-                    xy=(0.08, 0.80),
+                    xy=(0.02, 0.70),
                     xycoords="axes fraction",
                 )
                 ax[(rows // 3) + i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
                     xy=(0.08, 0.80),
                     xycoords="axes fraction",
                 )
                 ax[2 * (rows // 3) + i][j].annotate(
-                    annotations[i][j],
+                    annotations[i * cols + j],
                     fontsize=FS + 4,
                     xy=(0.08, 0.80),
                     xycoords="axes fraction",
@@ -369,16 +557,17 @@ def gan_big_prediction_plot(
         # Set axes limits and grid to true for cross section plots
         for i in range(rows // 3, rows):
             for j in range(cols):
-                ax[i][j].set_ylim(0, 6.0e-14)
+                ax[i][j].set_ylim(-0.1e-14, 7.50e-14)
                 ax[i][j].grid(True)
                 ax[i][j].set_xticks([400, 500, 600, 700, 800])
+                ax[i][j].yaxis.set_major_locator(ticker.MultipleLocator(2.0e-14))
 
         # Add a colorbar
         cb_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])
         cb = fig.colorbar(im_plot, cax=cb_ax)
         cb.ax.tick_params(labelsize=FS + 8)
 
-        plt.subplots_adjust(wspace=0.2, hspace=0.3)
+        plt.subplots_adjust(wspace=0.2, hspace=0.2)
         plt.annotate(
             "Sca. cross sec. [m^2]",
             (0.08, 0.385),
@@ -400,7 +589,7 @@ def gan_big_prediction_plot(
             fontsize=FS + 6,
         )
         plt.annotate(
-            "Original | " + network_label,
+            "Original | " + network_labels[0] + " | " + network_labels[1],
             (0.35, 0.90),
             xycoords="figure fraction",
             fontsize=FS + 8,
@@ -410,21 +599,39 @@ def gan_big_prediction_plot(
     return fig
 
 
-def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
+def gaussian_spectrum_plot(fig, x_pair, y_pair, labels, lda, sca, abs):
+    # Parse data
+    x1 = x_pair[0]
+    x2 = x_pair[1]
+    y_pred1 = y_pair[0]
+    y_pred2 = y_pair[1]
+    label1 = labels[0]
+    label2 = labels[1]
+
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     custom_colors = prop_cycle.by_key()["color"]
 
-    ax = fig.subplots(1, 2)
-    im = ax[1].imshow(x[1], cmap="inferno_r", vmin=-1, vmax=1)
+    ax = fig.subplots(1, 3)
+    ax[1].imshow(x1[1], cmap="inferno_r", vmin=-1, vmax=1)
+    im = ax[2].imshow(x2[1], cmap="inferno_r", vmin=-1, vmax=1)
     ax[1].axis("off")
+    ax[2].axis("off")
 
-    # Use a twin axis to display scattering and absoroption cross section
+    # Use a twin axis to display scattering and absorption cross section
     ax[0].plot(lda, sca, label="Gaussian", color=custom_colors[0], marker="")
     ax[0].plot(
         lda,
-        y_pred[0],
+        y_pred1[0],
         "--",
-        label="CNN-prediction",
+        label=textwrap.fill(f"CNN-prediction, {label1}", width=15),
+        color=custom_colors[0],
+        marker="",
+    )
+    ax[0].plot(
+        lda,
+        y_pred2[0],
+        ":",
+        label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[0],
         marker="",
     )
@@ -432,8 +639,17 @@ def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
     ax[0].set_ylabel("Sca. Cross sec. [m^2]", color=custom_colors[0])
     ax[0].tick_params(axis="y", labelcolor=custom_colors[0])
     ax[0].grid(True)
-    all_vals = [sca.min(), sca.max(), abs.min(), abs.max(), y_pred.min(), y_pred.max()]
-    ax[0].set_ylim(min(all_vals), 1.3 * max(all_vals))
+    all_vals = [
+        sca.min(),
+        sca.max(),
+        abs.min(),
+        abs.max(),
+        y_pred1.min(),
+        y_pred1.max(),
+        y_pred2.min(),
+        y_pred2.max(),
+    ]
+    ax[0].set_ylim(min(all_vals), 1.7 * max(all_vals))
     leg = ax[0].legend(loc="upper right")
     for text in leg.get_texts():
         text.set_color("black")
@@ -442,9 +658,17 @@ def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
     twin_ax.plot(lda, abs, label="Gaussian", color=custom_colors[1], marker="")
     twin_ax.plot(
         lda,
-        y_pred[1],
+        y_pred1[1],
         "--",
-        label="CNN-prediction",
+        label=textwrap.fill(f"CNN-prediction, {label1}", width=15),
+        color=custom_colors[1],
+        marker="",
+    )
+    twin_ax.plot(
+        lda,
+        y_pred2[1],
+        ":",
+        label=textwrap.fill(f"CNN-prediction, {label2}", width=15),
         color=custom_colors[1],
         marker="",
     )
@@ -454,6 +678,87 @@ def gaussian_spectrum_plot(fig, x, y_pred, lda, sca, abs):
     twin_ax.set_ylim(ax[0].get_ylim())
     twin_ax.grid(False)
 
-    fig.colorbar(im, ax=ax[1])
+    fig.colorbar(im, ax=ax, location="right")
 
     return
+
+
+def data_samples_plot(
+    data_loader,
+    inverse_target_transform,
+    indices=(666, 1111, 333, 1888),
+    sample_labels=["Dimer cylinder", "Dimer prism", "Dimer diamond", "Ellipsoid"],
+):
+    n_samples = 4
+    assert isinstance(indices, tuple) and len(indices) == n_samples
+
+    # To make a figure with six axes, row 1: 0, 1, 2, 3, row 2: 4, 5
+    fig = plt.figure(figsize=(9, 5))
+    gs = fig.add_gridspec(2, 4, hspace=0.05, wspace=0.05)
+    specs = [gs[0, 0], gs[0, 1], gs[0, 2], gs[0, 3], gs[1, 0:2], gs[1, 2:4]]
+    ax = [fig.add_subplot(spec) for spec in specs]
+
+    cmap = plt.get_cmap("inferno_r")
+
+    with torch.no_grad():
+        image, label = next(iter(data_loader))
+        image, label = (image[indices, :, :, :], label[indices, :, :])
+        label = inverse_target_transform(label)
+        ydim = label.shape[-1]
+        lda = np.linspace(400, 800, ydim)
+
+        for j in range(n_samples):
+            ax[j].imshow(image[j, 1, :, :], vmin=-1, vmax=1, cmap=cmap)
+            plt.setp(ax[j], xticks=[], yticks=[])
+
+        linestyles = ["solid", "dashed", "dashdot", "dotted"]
+        for j in range(n_samples):
+            ax[4].plot(
+                lda,
+                label[j, 0, :],
+                label=sample_labels[j],
+                marker="",
+                linestyle=linestyles[j],
+            )
+            ax[5].plot(
+                lda,
+                label[j, 1, :],
+                label=sample_labels[j],
+                marker="",
+                linestyle=linestyles[j],
+            )
+
+        ax[4].set_xlabel("Wavelength [nm]")
+        ax[5].set_xlabel("Wavelength [nm]")
+        ax[4].set_ylabel("Sca. Cross Sec. [m^2]")
+        ax[4].tick_params(axis="y")
+        ax[5].set_ylabel("Abs. Cross sec. [m^2]")
+        ax[5].tick_params(axis="y")
+        ax[5].yaxis.set_label_position("right")
+        ax[5].yaxis.tick_right()
+
+        sca_max = torch.max(label[:, 0, :]).item()
+        abs_max = torch.max(label[:, 1, :]).item()
+        ax[4].set_ylim(-0.05 * sca_max, 1.5 * sca_max)
+        ax[5].set_ylim(-0.05 * abs_max, 1.5 * abs_max)
+
+        ax[4].legend(loc="upper left", fontsize=7, ncol=2)
+        ax[5].legend(loc="upper left", fontsize=7, ncol=2)
+
+        ax[4].grid(True)
+        ax[5].grid(True)
+
+        cbar_ax = fig.add_axes([0.91, 0.53, 0.02, 0.33])
+        im = ax[0].get_images()[0]
+        fig.colorbar(im, cax=cbar_ax)
+
+        for j, l in enumerate(["a)", "b)", "c)", "d)", "e)", "f)"]):
+            ax[j].text(
+                0.9,
+                0.9,
+                l,
+                transform=ax[j].transAxes,
+                fontsize=10,
+            )
+
+    return fig
